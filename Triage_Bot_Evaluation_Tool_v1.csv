@@ -1,0 +1,23 @@
+Triage Bot — Evaluation Tool,,,,
+,,,,
+Purpose,,,,
+"Use this workbook to compare AI-generated triage results for current-sprint Jira tickets against the human classification, capture reviewer feedback, and measure classification performance. The historical 100-ticket dataset is retained as the baseline/reference set.",,,,
+,,,,
+,,,,
+,,,,
+How to use,,,,
+Step,What to do,,AI result,How the tool treats it
+1,Open the Evaluation sheet and find the Jira ticket you want to evaluate.,,Bug / Config / Change Request,Compared directly with the Final Expected Classification.
+2,"Paste/enter the AI result into the yellow AI input columns: classification, confidence, reason, evidence, recommended action, suggested team/owner, and human-review status.",,Needs Manual Triage,"Recorded as an abstention/manual-review outcome, not as a correct class."
+3,The Auto Evaluation column compares the AI Classification with the Expected Classification.,,Blank AI Classification,Not evaluated; excluded from attempted-classification accuracy.
+4,"For an incorrect or uncertain result, use Reviewer Decision, Correct Classification, Feedback Type, and Reviewer Feedback.",,Reviewer Correct Classification,Overrides the supplied expected class for evaluation of that row.
+5,Dashboard metrics update from the Evaluation sheet. Do not change the historical baseline unless a genuine correction is approved.,,,
+6,Use the Triage_Framework sheet as the classification rulebook when reviewing borderline cases.,,,
+,,,,
+Design note,,,,
+The supplied RawDataCurrentSprint file already contains a Classification column. This workbook treats that supplied value as the initial Expected Classification. A reviewer can use Correct Classification to override it when the supplied label is provisional or needs correction.,,,,
+,,,,
+,,,,
+,,,,
+Recommended evaluation practice,,,,
+"For a fair model evaluation, enter the AI result before reviewing the expected class where possible. Keep the 100-ticket Historical_Baseline unchanged and use it as the reference/evaluation set rather than as a source for manual guesses.",,,,

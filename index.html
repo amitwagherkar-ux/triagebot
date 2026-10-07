@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrelioHealth AI Triage Evaluator</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ======================================================================
+       App Header & Primary Controls
+       ====================================================================== -->
+  <header class="app-header">
+    <div class="header-top">
+      <div class="brand-section">
+        <a href="#" class="brand-logo">
+          <div class="brand-icon">C</div>
+          <div>
+            <div class="brand-title">CrelioHealth TriageBot Evaluator</div>
+          </div>
+        </a>
+        <span class="brand-badge">v2.0 Enterprise</span>
+
+        <!-- Mode Switcher -->
+        <div class="mode-toggle-group" style="margin-left: 1.5rem;">
+          <button class="mode-btn active" data-mode="HISTORICAL" title="Evaluate against 100 historically triaged tickets with locked human ground truth">
+            🏛️ Historical Baseline <span class="mode-badge">100</span>
+          </button>
+          <button class="mode-btn" data-mode="CURRENT_SPRINT" title="Live evaluation of 52 raw Jira tickets awaiting product analyst triage validation">
+            ⚡ Current Sprint <span class="mode-badge">52</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Run Selector & Header Actions -->
+      <div class="header-actions">
+        <div class="run-selector-wrap">
+          <span class="run-label">AI Run:</span>
+          <select class="run-select" id="runSelect"></select>
+        </div>
+
+        <button class="btn btn-primary" onclick="switchTab('import')">
+          + Ingest AI Run
+        </button>
+
+        <button class="btn btn-secondary" onclick="openGlobalHelpModal()" title="Open comprehensive user guide & shortcuts">
+          ❓ Quick Guide
+        </button>
+
+        <button class="btn btn-secondary" onclick="exportFullEvaluationCSV()" title="Export evaluation matrix as CSV">
+          ⬇ Export CSV
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Metric Bar & Navigation Tabs -->
+    <div class="header-nav">
+      <ul class="nav-tabs">
+        <li>
+          <button class="nav-tab-btn active" data-tab="dashboard">
+            📊 Dashboard
+          </button>
+        </li>
+        <li>
+          <button class="nav-tab-btn" data-tab="evaluation">
+            📋 Evaluation Studio
+          </button>
+        </li>
+        <li>
+          <button class="nav-tab-btn" data-tab="review">
+            🎯 Review Queue <span class="tab-badge" id="badgeReviewCount">0</span>
+          </button>
+        </li>
+        <li>
+          <button class="nav-tab-btn" data-tab="comparison">
+            🔬 Model Comparison
+          </button>
+        </li>
+        <li>
+          <button class="nav-tab-btn" data-tab="patterns">
+            💡 Feedback & Patterns
+          </button>
+        </li>
+        <li>
+          <button class="nav-tab-btn" data-tab="import">
+            📥 Import & Mapping
+          </button>
+        </li>
+        <li>
+          <button class="nav-tab-btn" data-tab="export">
+            📤 Export Center
+          </button>
+        </li>
+        <li>
+          <button class="nav-tab-btn" data-tab="framework">
+            📖 Triage Framework
+          </button>
+        </li>
+      </ul>
+
+      <!-- Quick KPI Status Pills -->
+      <div class="quick-kpi-bar">
+        <div class="kpi-pill">
+          <span>Accuracy:</span>
+          <span class="kpi-pill-val success" id="quickAccuracyVal">--%</span>
+        </div>
+        <div class="kpi-pill">
+          <span>High-Risk Errors:</span>
+          <span class="kpi-pill-val danger" id="quickHighRiskVal">0</span>
+        </div>
+        <div class="kpi-pill">
+          <span>Manual Triage Rate:</span>
+          <span class="kpi-pill-val" id="quickAbstainVal">--%</span>
+        </div>
+        <div class="kpi-pill">
+          <span>Pending Reviews:</span>
+          <span class="kpi-pill-val warning" id="quickPendingVal">0</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================================================================
+       Main Content Body
+       ====================================================================== -->
+  <main class="app-main">
+
+    <!-- TAB 1: EXECUTIVE DASHBOARD -->
+    <section class="tab-pane active" id="tab_dashboard">
+      
+      <!-- Quick Help Guide for Dashboard -->
+      <div class="page-quick-guide" id="guide_dashboard">
+        <div class="guide-header" onclick="toggleGuide('dashboard')">
+          <div class="guide-title-wrap">
+            <div class="guide-icon-badge">💡</div>
+            <div>
+              <div class="guide-title">Quick Guide: Executive Dashboard</div>
+              <div class="guide-subtitle">Understand overall model health, confusion patterns, and automation risk</div>
+            </div>
+          </div>
+          <button class="guide-toggle-btn" id="btn_toggle_dashboard">Hide Guide ✕</button>
+        </div>
+        <div class="guide-body" id="body_guide_dashboard">
+          <div class="guide-card">
+            <div class="guide-card-head">🎯 What this page shows</div>
+            <div class="guide-card-text">
+              High-level report card: <strong>Attempted Accuracy</strong>, <strong>Macro F1</strong>, and <strong>High-Risk Errors</strong>. It tells you whether this AI run is ready for production.
+            </div>
+          </div>
+          <div class="guide-card">
+            <div class="guide-card-head">⚡ Interactive Tricks</div>
+            <div class="guide-card-text">
+              <strong>Click any number in the Confusion Matrix</strong> to immediately inspect those tickets in the table. Drag the <strong>Threshold Slider</strong> to test automation cutoffs.
+            </div>
+          </div>
+          <div class="guide-card tip-card">
+            <div class="guide-card-head">💡 Pro-Tip</div>
+            <div class="guide-card-text">
+              Check the <strong>High-Confidence Error Spotlight</strong> first! When the AI is &ge; 80% confident and wrong, it causes the biggest damage in production.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top 5 KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card highlight-success">
+          <div class="kpi-card-header">
+            <span class="kpi-card-title">Accuracy (Attempted)</span>
+            <span class="kpi-card-icon">🎯</span>
+          </div>
+          <div class="kpi-card-value" id="kpiAccuracyVal">--%</div>
+          <div class="kpi-card-sub" id="kpiAccuracySub">Evaluating attempted predictions</div>
+        </div>
+
+        <div class="kpi-card highlight-danger">
+          <div class="kpi-card-header">
+            <span class="kpi-card-title">High-Risk Errors</span>
+            <span class="kpi-card-icon">⚠️</span>
+          </div>
+          <div class="kpi-card-value" style="color: var(--status-incorrect);" id="kpiHighRiskVal">0</div>
+          <div class="kpi-card-sub" id="kpiHighRiskSub">Confident but wrong answers</div>
+        </div>
+
+        <div class="kpi-card highlight-primary">
+          <div class="kpi-card-header">
+            <span class="kpi-card-title">Macro F1-Score</span>
+            <span class="kpi-card-icon">📈</span>
+          </div>
+          <div class="kpi-card-value" id="kpiMacroF1Val">0.000</div>
+          <div class="kpi-card-sub" id="kpiMacroF1Sub">Balanced metric across all classes</div>
+        </div>
+
+        <div class="kpi-card highlight-warning">
+          <div class="kpi-card-header">
+            <span class="kpi-card-title">Abstention Rate</span>
+            <span class="kpi-card-icon">⚡</span>
+          </div>
+          <div class="kpi-card-value" id="kpiAbstentionVal">--%</div>
+          <div class="kpi-card-sub" id="kpiAbstentionSub">Sent to Needs Manual Triage</div>
+        </div>
+
+        <div class="kpi-card highlight-primary">
+          <div class="kpi-card-header">
+            <span class="kpi-card-title">Average Confidence</span>
+            <span class="kpi-card-icon">📊</span>
+          </div>
+          <div class="kpi-card-value" id="kpiAvgConfVal">--%</div>
+          <div class="kpi-card-sub" id="kpiAvgConfSub">Confidence distribution</div>
+        </div>
+      </div>
+
+      <!-- Two-Column Analytics: Confusion Matrix + Per-Class Metrics -->
+      <div class="dashboard-row">
+        <!-- Confusion Matrix -->
+        <div class="content-card">
+          <div class="content-card-header">
+            <div class="card-title-group">
+              <span style="font-size: 1.25rem;">🔲</span>
+              <div>
+                <h3 class="card-title">Confusion Matrix</h3>
+                <p class="card-subtitle">AI Predictions (Rows) vs Human Ground Truth (Columns). Click any cell to inspect tickets.</p>
+              </div>
+            </div>
+          </div>
+          <div class="matrix-container" id="confusionMatrixWrap"></div>
+        </div>
+
+        <!-- Per-Class Performance Table -->
+        <div class="content-card">
+          <div class="content-card-header">
+            <div class="card-title-group">
+              <span style="font-size: 1.25rem;">📊</span>
+              <div>
+                <h3 class="card-title">Per-Class Performance</h3>
+                <p class="card-subtitle">Precision, Recall, and F1-Score across categories.</p>
+              </div>
+            </div>
+          </div>
+          <table class="class-metrics-table">
+            <thead>
+              <tr>
+                <th>Classification</th>
+                <th>Support</th>
+                <th>Precision</th>
+                <th>Recall</th>
+                <th>F1-Score</th>
+              </tr>
+            </thead>
+            <tbody id="perClassMetricsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Second Row: Confidence Threshold Simulator + High-Risk Spotlight -->
+      <div class="dashboard-row">
+        <!-- Confidence Threshold Simulator -->
+        <div class="content-card">
+          <div class="content-card-header">
+            <div class="card-title-group">
+              <span style="font-size: 1.25rem;">🎛️</span>
+              <div>
+                <h3 class="card-title">Confidence Threshold Simulator</h3>
+                <p class="card-subtitle">Tune automated approval vs manual escalation threshold.</p>
+              </div>
+            </div>
+            <span class="threshold-val-badge" id="thresholdValBadge">80%</span>
+          </div>
+
+          <div class="threshold-slider-row">
+            <span class="slider-label">Escalation Cutoff:</span>
+            <input type="range" class="threshold-range" id="thresholdSlider" min="50" max="95" step="5" value="80">
+          </div>
+
+          <div class="threshold-impact-grid">
+            <div class="impact-box">
+              <span class="impact-box-val" id="simAutomatedVal">--</span>
+              <span class="impact-box-lbl">Automated Classifications</span>
+            </div>
+            <div class="impact-box">
+              <span class="impact-box-val" id="simManualVal">--</span>
+              <span class="impact-box-lbl">Escalated to Human</span>
+            </div>
+            <div class="impact-box">
+              <span class="impact-box-val" style="color: var(--status-incorrect);" id="simIncorrectVal">0</span>
+              <span class="impact-box-lbl">Incorrect Automations</span>
+            </div>
+            <div class="impact-box">
+              <span class="impact-box-val" id="simErrorRateVal">0%</span>
+              <span class="impact-box-lbl">Automation Error Rate</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- High-Confidence Error Spotlight -->
+        <div class="content-card">
+          <div class="content-card-header">
+            <div class="card-title-group">
+              <span style="font-size: 1.25rem;">🚨</span>
+              <div>
+                <h3 class="card-title">High-Confidence Error Spotlight</h3>
+                <p class="card-subtitle">Critical mistakes where AI had high confidence but was wrong.</p>
+              </div>
+            </div>
+          </div>
+          <div class="high-risk-list" id="highRiskList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: EVALUATION STUDIO -->
+    <section class="tab-pane" id="tab_evaluation">
+      
+      <!-- Quick Help Guide for Evaluation Studio -->
+      <div class="page-quick-guide" id="guide_evaluation">
+        <div class="guide-header" onclick="toggleGuide('evaluation')">
+          <div class="guide-title-wrap">
+            <div class="guide-icon-badge">📋</div>
+            <div>
+              <div class="guide-title">Quick Guide: Evaluation Studio</div>
+              <div class="guide-subtitle">Master table for searching, filtering, and side-by-side inspection</div>
+            </div>
+          </div>
+          <button class="guide-toggle-btn" id="btn_toggle_evaluation">Hide Guide ✕</button>
+        </div>
+        <div class="guide-body" id="body_guide_evaluation">
+          <div class="guide-card">
+            <div class="guide-card-head">🎯 What this page shows</div>
+            <div class="guide-card-text">
+              The full database of tickets with side-by-side badges: <strong>Human Truth</strong> vs <strong>AI Prediction</strong>, confidence scores, and response quality ratings.
+            </div>
+          </div>
+          <div class="guide-card">
+            <div class="guide-card-head">⚡ Interactive Tricks</div>
+            <div class="guide-card-text">
+              Type keywords in the <strong>Search bar</strong> to find symptoms. Use the <strong>Outcome filter</strong> to see only incorrect predictions, or toggle <strong>High-Risk Only</strong>.
+            </div>
+          </div>
+          <div class="guide-card tip-card">
+            <div class="guide-card-head">💡 Pro-Tip</div>
+            <div class="guide-card-text">
+              Click <strong>Deep Dive</strong> on any ticket to slide open the review drawer, inspect verified evidence vs inferences, and record reviewer feedback!
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter Toolbar -->
+      <div class="filter-toolbar">
+        <div class="filter-row">
+          <div class="search-input-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="search-input" id="tableSearchInput" placeholder="Search by Jira ID, Summary, or AI Reasoning...">
+          </div>
+
+          <select class="filter-select" id="filterStatusSelect">
+            <option value="ALL">All Evaluation Outcomes</option>
+            <option value="CORRECT">✓ Correct Classifications Only</option>
+            <option value="INCORRECT">✗ Incorrect Classifications Only</option>
+            <option value="ABSTAINED">⚡ Needs Manual Triage (Abstained)</option>
+            <option value="NO_AI">No AI Prediction</option>
+          </select>
+
+          <select class="filter-select" id="filterAiClassSelect">
+            <option value="ALL">All AI Predictions</option>
+            <option value="Bug">AI: Bug</option>
+            <option value="Config">AI: Config</option>
+            <option value="Change Request">AI: Change Request</option>
+            <option value="Needs Manual Triage">AI: Needs Manual Triage</option>
+          </select>
+
+          <select class="filter-select" id="filterGroundTruthSelect">
+            <option value="ALL">All Human Ground Truth</option>
+            <option value="Bug">Human: Bug</option>
+            <option value="Config">Human: Config</option>
+            <option value="Change Request">Human: Change Request</option>
+          </select>
+
+          <label style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.8rem; cursor: pointer; color: var(--text-muted); user-select: none;">
+            <input type="checkbox" id="filterHighRiskOnly" style="accent-color: var(--status-incorrect);">
+            High-Risk Only (≥ Threshold)
+          </label>
+        </div>
+      </div>
+
+      <!-- Data Table Card -->
+      <div class="table-card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 110px;">Jira ID</th>
+                <th>Summary & Metadata</th>
+                <th style="width: 140px;">Human Truth</th>
+                <th style="width: 140px;">AI Prediction</th>
+                <th style="width: 80px;">Conf</th>
+                <th style="width: 150px;">Evaluation</th>
+                <th style="width: 90px;" title="Quality of Reason / Evidence / Action">Quality</th>
+                <th style="width: 110px; text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="evaluationTableBody"></tbody>
+          </table>
+        </div>
+        <div class="table-footer">
+          <div id="tableCountLabel">Showing tickets...</div>
+          <div class="pagination-controls" id="tablePagination"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: REVIEW QUEUE -->
+    <section class="tab-pane" id="tab_review">
+      
+      <!-- Quick Help Guide for Review Queue -->
+      <div class="page-quick-guide" id="guide_review">
+        <div class="guide-header" onclick="toggleGuide('review')">
+          <div class="guide-title-wrap">
+            <div class="guide-icon-badge">🎯</div>
+            <div>
+              <div class="guide-title">Quick Guide: Product Analyst Review Queue</div>
+              <div class="guide-subtitle">Your rapid 1-click triage desk for validating sprint tickets and fixing AI errors</div>
+            </div>
+          </div>
+          <button class="guide-toggle-btn" id="btn_toggle_review">Hide Guide ✕</button>
+        </div>
+        <div class="guide-body" id="body_guide_review">
+          <div class="guide-card">
+            <div class="guide-card-head">🎯 What this page shows</div>
+            <div class="guide-card-text">
+              A clean card deck showing tickets waiting for human judgment. In <strong>Current Sprint mode</strong>, it shows fresh unverified tickets. In <strong>Historical mode</strong>, it isolates mistakes.
+            </div>
+          </div>
+          <div class="guide-card">
+            <div class="guide-card-head">⚡ The 3 Fast Actions</div>
+            <div class="guide-card-text">
+              <strong>✓ Correct</strong> confirms AI's choice. <strong>✗ Override</strong> opens the correction drawer to tag the root cause. <strong>⚡ Escalate</strong> marks uncertain tickets for manual engineering triage.
+            </div>
+          </div>
+          <div class="guide-card tip-card">
+            <div class="guide-card-head">💡 Pro-Tip</div>
+            <div class="guide-card-text">
+              Every decision updates the dashboard immediately while preserving the original AI prediction in the audit log!
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="review-queue-header">
+        <div>
+          <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main);">Product Analyst Review Queue</h2>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">
+            Focused triage queue for evaluating unverified sprint tickets, conflicting classifications, and high-risk mistakes.
+          </p>
+        </div>
+        <span class="badge badge-manual" id="reviewQueueCount" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">0 pending</span>
+      </div>
+
+      <div class="review-cards-list" id="reviewCardsList"></div>
+    </section>
+
+    <!-- TAB 4: MODEL COMPARISON -->
+    <section class="tab-pane" id="tab_comparison">
+      
+      <!-- Quick Help Guide for Model Comparison -->
+      <div class="page-quick-guide" id="guide_comparison">
+        <div class="guide-header" onclick="toggleGuide('comparison')">
+          <div class="guide-title-wrap">
+            <div class="guide-icon-badge">🔬</div>
+            <div>
+              <div class="guide-title">Quick Guide: Model & Prompt Comparison</div>
+              <div class="guide-subtitle">A/B test different LLM models or prompt revisions to prove performance improvements</div>
+            </div>
+          </div>
+          <button class="guide-toggle-btn" id="btn_toggle_comparison">Hide Guide ✕</button>
+        </div>
+        <div class="guide-body" id="body_guide_comparison">
+          <div class="guide-card">
+            <div class="guide-card-head">🎯 What this page shows</div>
+            <div class="guide-card-text">
+              Side-by-side comparison of <strong>Baseline Run (A)</strong> vs <strong>Candidate Run (B)</strong> with green/red delta badges for Accuracy, F1-Scores, and error counts.
+            </div>
+          </div>
+          <div class="guide-card">
+            <div class="guide-card-head">⚡ Shift Analysis</div>
+            <div class="guide-card-text">
+              Look below at <strong>Fixed in Run B</strong> to see tickets where the new prompt solved previous errors, and <strong>Regressed in Run B</strong> to ensure no working tickets were broken.
+            </div>
+          </div>
+          <div class="guide-card tip-card">
+            <div class="guide-card-head">💡 Pro-Tip</div>
+            <div class="guide-card-text">
+              Compare <strong>Prompt v1.0 Baseline</strong> with <strong>Prompt v2.0 Rule-Guided</strong> to see how enforcing the 5 Triage Rules eliminated keyword confusion!
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="comparison-picker-bar">
+        <div class="comparison-slot">
+          <span style="font-weight: 700; color: var(--text-muted);">Baseline Run (A):</span>
+          <select class="filter-select" id="compareSelectA" style="min-width: 280px;"></select>
+        </div>
+        <div style="font-size: 1.25rem; color: var(--text-dim); font-weight: 800;">VS</div>
+        <div class="comparison-slot">
+          <span style="font-weight: 700; color: var(--primary-light);">Candidate Run (B):</span>
+          <select class="filter-select" id="compareSelectB" style="min-width: 280px;"></select>
+        </div>
+      </div>
+
+      <div class="content-card" style="margin-bottom: 1.5rem;">
+        <h3 class="card-title" style="margin-bottom: 1rem;">Side-by-Side Metric Deltas</h3>
+        <table class="class-metrics-table">
+          <thead>
+            <tr>
+              <th>Evaluation Metric</th>
+              <th>Run A (Baseline)</th>
+              <th>Run B (Candidate)</th>
+              <th>Delta (B - A)</th>
+            </tr>
+          </thead>
+          <tbody id="compareTableBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Shift Analysis -->
+      <div id="shiftAnalysisWrap"></div>
+    </section>
+
+    <!-- TAB 5: FEEDBACK & PATTERNS -->
+    <section class="tab-pane" id="tab_patterns">
+      
+      <!-- Quick Help Guide for Feedback & Patterns -->
+      <div class="page-quick-guide" id="guide_patterns">
+        <div class="guide-header" onclick="toggleGuide('patterns')">
+          <div class="guide-title-wrap">
+            <div class="guide-icon-badge">💡</div>
+            <div>
+              <div class="guide-title">Quick Guide: Feedback & Pattern Analysis</div>
+              <div class="guide-subtitle">Identify root causes of AI failure and evaluate triage response quality</div>
+            </div>
+          </div>
+          <button class="guide-toggle-btn" id="btn_toggle_patterns">Hide Guide ✕</button>
+        </div>
+        <div class="guide-body" id="body_guide_patterns">
+          <div class="guide-card">
+            <div class="guide-card-head">🎯 What this page shows</div>
+            <div class="guide-card-text">
+              Diagnostic bar charts of the <strong>14 Root-Cause Error Types</strong> tagged by analysts, plus the <strong>Most Confused Pairs</strong> (e.g., Config mistaken for Bug).
+            </div>
+          </div>
+          <div class="guide-card">
+            <div class="guide-card-head">⚡ Response Quality Scorecard</div>
+            <div class="guide-card-text">
+              Evaluates whether the AI's <strong>Reasoning</strong>, <strong>Evidence</strong>, <strong>Recommended Action</strong>, and <strong>Owner</strong> are appropriate independent of classification accuracy.
+            </div>
+          </div>
+          <div class="guide-card tip-card">
+            <div class="guide-card-head">💡 Pro-Tip</div>
+            <div class="guide-card-text">
+              If "Configuration mistaken for Bug" is your top error bar, your model lacks knowledge of account-level settings and needs system prompt refinement.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="patterns-grid">
+        <!-- Error Type Taxonomy Chart -->
+        <div class="content-card">
+          <div class="content-card-header">
+            <div class="card-title-group">
+              <span style="font-size: 1.25rem;">🏷️</span>
+              <div>
+                <h3 class="card-title">Error Taxonomy Distribution</h3>
+                <p class="card-subtitle">Frequency of reviewer-flagged root causes.</p>
+              </div>
+            </div>
+          </div>
+          <div id="errorTypesChart"></div>
+        </div>
+
+        <!-- Confused Classification Pairs -->
+        <div class="content-card">
+          <div class="content-card-header">
+            <div class="card-title-group">
+              <span style="font-size: 1.25rem;">🔄</span>
+              <div>
+                <h3 class="card-title">Most Confused Classification Pairs</h3>
+                <p class="card-subtitle">Where AI classification deviates from ground truth.</p>
+              </div>
+            </div>
+          </div>
+          <div id="confusedPairsChart"></div>
+        </div>
+      </div>
+
+      <!-- Triage Response Quality Scorecard -->
+      <div class="content-card">
+        <div class="content-card-header">
+          <div class="card-title-group">
+            <span style="font-size: 1.25rem;">✨</span>
+            <div>
+              <h3 class="card-title">Triage-Response Quality Scorecard</h3>
+              <p class="card-subtitle">Evaluates reasoning, evidence validity, recommended actions, and ownership independent of classification accuracy.</p>
+            </div>
+          </div>
+        </div>
+        <div id="qualityScorecardWrap"></div>
+      </div>
+    </section>
+
+    <!-- TAB 6: IMPORT & MAPPING -->
+    <section class="tab-pane" id="tab_import">
+      
+      <!-- Quick Help Guide for Import & Mapping -->
+      <div class="page-quick-guide" id="guide_import">
+        <div class="guide-header" onclick="toggleGuide('import')">
+          <div class="guide-title-wrap">
+            <div class="guide-icon-badge">📥</div>
+            <div>
+              <div class="guide-title">Quick Guide: Ingest, Column Mapping & AI Training Workflow</div>
+              <div class="guide-subtitle">Upload external AI predictions and follow the 6-step loop to train the model to be more accurate</div>
+            </div>
+          </div>
+          <button class="guide-toggle-btn" id="btn_toggle_import">Hide Guide ✕</button>
+        </div>
+        <div class="guide-body" id="body_guide_import">
+          <div class="guide-card">
+            <div class="guide-card-head">🎯 What this page does</div>
+            <div class="guide-card-text">
+              Acts as the <strong>data intake gateway</strong>. It ingests CSV or JSON prediction files from any AI model, auto-detects column names, validates row integrity, and saves the data as a new <strong>Model Run</strong> without touching original source files.
+            </div>
+          </div>
+          <div class="guide-card">
+            <div class="guide-card-head">⚡ 3-Step Fast Ingest</div>
+            <div class="guide-card-text">
+              <strong>1. Drop file:</strong> Upload your prediction CSV or JSON below.<br>
+              <strong>2. Verify mapping:</strong> Confirm auto-matched columns (Ticket ID, Class, Confidence).<br>
+              <strong>3. Click Validate & Import:</strong> App creates a new run and recalculates dashboards instantly.
+            </div>
+          </div>
+          <div class="guide-card tip-card">
+            <div class="guide-card-head">💡 Golden Training Rule</div>
+            <div class="guide-card-text">
+              <strong>Quality & Tricky Edge Cases &gt; Raw Volume:</strong> Adding 20 tricky tickets where keywords mislead the model (like <em>duplicate PO numbers</em> that turn out to be Config) teaches the AI far more than 200 obvious tickets!
+            </div>
+          </div>
+        </div>
+
+        <!-- Detailed Training Blueprint Expansion -->
+        <div style="margin-top: 1rem; padding-top: 0.85rem; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+          <div style="font-size: 0.85rem; font-weight: 700; color: var(--primary-light); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            <span>🎓</span> How to Train & Improve the AI Model More Efficiently by Adding More Jira Tickets (6-Step Lifecycle)
+          </div>
+          <div class="guide-step-grid" style="margin-top: 0.5rem;">
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 1</span>
+              <div class="guide-step-title">Export Diverse Jira Tickets</div>
+              <div class="guide-step-desc">Export tickets from fresh sprints or unrepresented modules (e.g. CRM, Billing, Interfacing, WhatsApp). Ensure summaries, comments, and actual resolutions are included.</div>
+            </div>
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 2</span>
+              <div class="guide-step-title">Run AI & Format CSV</div>
+              <div class="guide-step-desc">Run your LLM on the tickets. Structure outputs using our <a href="SAMPLE_IMPORT_TEMPLATE.csv" download style="color: var(--accent-cyan); font-weight: 600;">SAMPLE_IMPORT_TEMPLATE.csv</a> (Ticket ID, AI Classification, Confidence, Reason, Evidence, Next Action).</div>
+            </div>
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 3</span>
+              <div class="guide-step-title">Ingest as a New Run</div>
+              <div class="guide-step-desc">Upload the file below, select the dataset target, assign a clear identifier (e.g. <code>Claude 3.5 - Sprint 42 Batch</code>), and click <strong>Validate & Import Run</strong>.</div>
+            </div>
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 4</span>
+              <div class="guide-step-title">Human Review & Error Tagging</div>
+              <div class="guide-step-desc">Open the <strong>Review Queue</strong>. For every ticket the AI got wrong, click <strong>[✗ Override]</strong>, choose the real category, and tag the root cause (e.g. <em>Configuration mistaken for Bug</em>).</div>
+            </div>
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 5</span>
+              <div class="guide-step-title">Export the Mistake Notebook</div>
+              <div class="guide-step-desc">Navigate to <strong>Export Center &rarr; Download Error Report CSV</strong>. This exports a structured list of high-value failure cases with analyst explanations.</div>
+            </div>
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 6</span>
+              <div class="guide-step-title">Feed Mistakes into Prompts</div>
+              <div class="guide-step-desc">Add the top 5–10 confused tickets as <strong>Few-Shot Examples</strong> in your system prompt. Re-run your model, ingest the candidate run, and use <strong>Model Comparison</strong> to verify accuracy gains!</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="import-container">
+        <!-- Upload Card -->
+        <div class="content-card">
+          <h3 class="card-title" style="margin-bottom: 0.5rem;">Ingest AI Evaluation Results</h3>
+          <p class="card-subtitle" style="margin-bottom: 1.25rem;">
+            Upload CSV or JSON file containing AI-generated classifications.
+          </p>
+
+          <div class="dropzone" onclick="document.getElementById('csvFileInput').click()">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📂</div>
+            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">Click to upload CSV or JSON</div>
+            <div style="font-size: 0.775rem; color: var(--text-dim);">Supports Jira export format, custom CSVs, and model run JSONs</div>
+            <input type="file" id="csvFileInput" accept=".csv,.json" style="display: none;">
+          </div>
+
+          <div style="margin-bottom: 1rem;">
+            <a href="SAMPLE_IMPORT_TEMPLATE.csv" download class="btn btn-secondary btn-sm">
+              ⬇ Download Sample CSV Template
+            </a>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Target Dataset</label>
+            <select class="form-control" id="importTargetDataset">
+              <option value="HISTORICAL">Historical Baseline (100 Tickets)</option>
+              <option value="CURRENT_SPRINT">Current Sprint (52 Tickets)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Model Name</label>
+            <input type="text" class="form-control" id="importModelName" placeholder="e.g. Claude 3.5 Sonnet / Gemini 1.5 Pro">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Prompt Version / Identifier</label>
+            <input type="text" class="form-control" id="importPromptVersion" placeholder="e.g. v2.1 Rule-Guided Few-Shot">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Run Notes</label>
+            <textarea class="form-control" id="importDescription" placeholder="Optional notes about model parameters, temperature, prompt modifications..."></textarea>
+          </div>
+        </div>
+
+        <!-- Column Mapping & Validation Card -->
+        <div class="content-card">
+          <h3 class="card-title" style="margin-bottom: 0.5rem;">Intelligent Column Mapping</h3>
+          <p class="card-subtitle" style="margin-bottom: 1rem;">
+            Verify or adjust incoming column mappings. Automatic synonym matching is applied.
+          </p>
+
+          <div id="columnMappingContainer">
+            <div style="padding: 3rem; text-align: center; color: var(--text-dim); font-size: 0.85rem;">
+              Upload a file on the left to activate column mapping.
+            </div>
+          </div>
+
+          <div id="importValidationErrors" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 1rem; margin-top: 1rem; font-size: 0.8rem;"></div>
+
+          <div style="margin-top: 1.5rem; text-align: right;">
+            <button class="btn btn-primary" id="importConfirmBtn" disabled onclick="executeImport()">
+              Validate & Import Run
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 7: EXPORT CENTER -->
+    <section class="tab-pane" id="tab_export">
+      
+      <!-- Quick Help Guide for Export Center -->
+      <div class="page-quick-guide" id="guide_export">
+        <div class="guide-header" onclick="toggleGuide('export')">
+          <div class="guide-title-wrap">
+            <div class="guide-icon-badge">📤</div>
+            <div>
+              <div class="guide-title">Quick Guide: Export Center</div>
+              <div class="guide-subtitle">Generate clean CSV reports for leadership, engineering audits, and prompt training</div>
+            </div>
+          </div>
+          <button class="guide-toggle-btn" id="btn_toggle_export">Hide Guide ✕</button>
+        </div>
+        <div class="guide-body" id="body_guide_export">
+          <div class="guide-card">
+            <div class="guide-card-head">🎯 What to export</div>
+            <div class="guide-card-text">
+              <strong>Full Matrix</strong>: Complete dataset with all Jira & AI fields.<br>
+              <strong>Error Report</strong>: Only incorrect predictions for debugging.<br>
+              <strong>Reviewer Audit</strong>: Human decisions and feedback tags.
+            </div>
+          </div>
+          <div class="guide-card">
+            <div class="guide-card-head">⚡ Prompt Engineering Value</div>
+            <div class="guide-card-text">
+              Send the <strong>Misclassified Tickets CSV</strong> to your engineering team—it serves as the "Mistake Notebook" for few-shot prompt training!
+            </div>
+          </div>
+          <div class="guide-card tip-card">
+            <div class="guide-card-head">💡 Pro-Tip</div>
+            <div class="guide-card-text">
+              All exports are standard RFC-4180 CSVs, easily openable in Microsoft Excel, Google Sheets, or Python.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="content-card">
+          <h3 class="card-title" style="margin-bottom: 0.5rem;">Full Evaluation Matrix</h3>
+          <p class="card-subtitle" style="margin-bottom: 1.25rem;">
+            Complete dataset containing Jira metadata, AI predictions, confidence scores, evaluation outcomes, and human reviewer decisions.
+          </p>
+          <button class="btn btn-primary" onclick="exportFullEvaluationCSV()">
+            ⬇ Download Complete CSV
+          </button>
+        </div>
+
+        <div class="content-card">
+          <h3 class="card-title" style="margin-bottom: 0.5rem;">Misclassified Tickets Only</h3>
+          <p class="card-subtitle" style="margin-bottom: 1.25rem;">
+            Filtered export of incorrect predictions and manual triage escalations for prompt engineering and error analysis.
+          </p>
+          <button class="btn btn-danger" onclick="exportMisclassifiedOnlyCSV()">
+            ⬇ Download Error Report CSV
+          </button>
+        </div>
+
+        <div class="content-card">
+          <h3 class="card-title" style="margin-bottom: 0.5rem;">Reviewer Feedback Audit Log</h3>
+          <p class="card-subtitle" style="margin-bottom: 1.25rem;">
+            Audit trail of all human reviewer decisions, classification overrides, feedback taxonomy tags, and quality ratings.
+          </p>
+          <button class="btn btn-secondary" onclick="exportReviewerFeedbackCSV()">
+            ⬇ Download Reviewer Audit CSV
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 8: TRIAGE DECISION FRAMEWORK & RULES -->
+    <section class="tab-pane" id="tab_framework">
+      
+      <!-- Quick Help Guide for Framework -->
+      <div class="page-quick-guide" id="guide_framework">
+        <div class="guide-header" onclick="toggleGuide('framework')">
+          <div class="guide-title-wrap">
+            <div class="guide-icon-badge">📖</div>
+            <div>
+              <div class="guide-title">Quick Guide: Triage Rulebook & Benchmarks</div>
+              <div class="guide-subtitle">The 5 Authoritative Decision Rules and historical benchmark reference cases</div>
+            </div>
+          </div>
+          <button class="guide-toggle-btn" id="btn_toggle_framework">Hide Guide ✕</button>
+        </div>
+        <div class="guide-body" id="body_guide_framework">
+          <div class="guide-card">
+            <div class="guide-card-head">🎯 The Core Question</div>
+            <div class="guide-card-text">
+              Always ask: <strong>"What is the product supposed to do today?"</strong> Never classify based solely on what the reporter calls the problem.
+            </div>
+          </div>
+          <div class="guide-card">
+            <div class="guide-card-head">⚡ The 5 Rules</div>
+            <div class="guide-card-text">
+              1. Start from expected behavior.<br>
+              2. Do not rely on keywords (bug, issue).<br>
+              3. Separate cause from fix method.<br>
+              4. Use evidence.<br>
+              5. Escalate uncertainty (Manual Triage).
+            </div>
+          </div>
+          <div class="guide-card tip-card">
+            <div class="guide-card-head">💡 Pro-Tip</div>
+            <div class="guide-card-text">
+              Consult the benchmark tickets below (e.g., EA-14523 PO numbers) to understand why symptoms can sound like defects but actually be configuration!
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="content-card" style="margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">Authoritative Triage Decision Framework</h2>
+        <p style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.5;">
+          Use these rules when reviewing borderline or ambiguous tickets. Keyword signals must never independently dictate classification.
+        </p>
+      </div>
+
+      <div class="patterns-grid">
+        <div class="rule-card">
+          <div class="rule-card-title">Rule 1 — Start from Expected Behavior</div>
+          <p style="font-size: 0.825rem; color: var(--text-muted);">
+            Ask: <em>"What is the product supposed to do?"</em> Do not classify based solely on what the reporter calls the issue.
+          </p>
+        </div>
+
+        <div class="rule-card">
+          <div class="rule-card-title">Rule 2 — Do Not Rely on Keywords</div>
+          <p style="font-size: 0.825rem; color: var(--text-muted);">
+            Words like <em>bug, issue, enhancement, feature, error</em> are signals only and never determine classification.
+          </p>
+        </div>
+
+        <div class="rule-card">
+          <div class="rule-card-title">Rule 3 — Separate Cause from Fix Method</div>
+          <p style="font-size: 0.825rem; color: var(--text-muted);">
+            A DB query fix does NOT make it Config. Engineering work does NOT make it Change Request. Classification is based on the underlying behavior and specification.
+          </p>
+        </div>
+
+        <div class="rule-card">
+          <div class="rule-card-title">Rule 4 & 5 — Use Evidence & Escalate Uncertainty</div>
+          <p style="font-size: 0.825rem; color: var(--text-muted);">
+            Prefer reproduction results and configuration checks. When evidence is conflicting or ambiguous, classify as <strong>Needs Manual Triage</strong>.
+          </p>
+        </div>
+      </div>
+
+      <!-- Benchmark Reference Examples -->
+      <div class="content-card" style="margin-top: 1.5rem;">
+        <h3 class="card-title" style="margin-bottom: 1rem;">Historical Benchmark Reference Tickets</h3>
+        <table class="class-metrics-table">
+          <thead>
+            <tr>
+              <th>Ticket</th>
+              <th>Summary</th>
+              <th>Action Taken</th>
+              <th>Ground Truth</th>
+              <th>Framework Rationale</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="ticket-link">EA-14529</span></td>
+              <td>Bulk registration age is displayed as 34.18356164383562 for patients.</td>
+              <td>Fixed - DB Query</td>
+              <td><span class="badge badge-bug">Bug</span></td>
+              <td style="font-size: 0.775rem; color: var(--text-muted);">Actual defect in existing logic; remediating via DB query does not change classification.</td>
+            </tr>
+            <tr>
+              <td><span class="ticket-link">EA-14523</span></td>
+              <td>Inventory PO - Same PO number is generated for two different purchase orders.</td>
+              <td>Working as expected</td>
+              <td><span class="badge badge-config">Config</span></td>
+              <td style="font-size: 0.775rem; color: var(--text-muted);">Keyword trap ("Same PO number generated"); behavior was working per center sequence configuration.</td>
+            </tr>
+            <tr>
+              <td><span class="ticket-link">EA-14480</span></td>
+              <td>WhatsApp messages are not getting triggered for patients and organizations.</td>
+              <td>Working as expected</td>
+              <td><span class="badge badge-config">Config</span></td>
+              <td style="font-size: 0.775rem; color: var(--text-muted);">Product capability exists; failure caused by missing account-level template registration.</td>
+            </tr>
+            <tr>
+              <td><span class="ticket-link">EA-14539</span></td>
+              <td>Test Bulk Consumption incorrectly displays "Consumption Successful" when no inventory is mapped.</td>
+              <td>Enhancement</td>
+              <td><span class="badge badge-cr">Change Request</span></td>
+              <td style="font-size: 0.775rem; color: var(--text-muted);">Wording sounds like a defect, but adding validation logic is an intentional product change.</td>
+            </tr>
+            <tr>
+              <td><span class="ticket-link">EN-12847</span></td>
+              <td>QR code is not getting scanned even after all reports have been submitted.</td>
+              <td>Parked - Insufficient Details</td>
+              <td><span class="badge badge-manual">Needs Manual Triage</span></td>
+              <td style="font-size: 0.775rem; color: var(--text-muted);">Insufficient reproduction evidence; model should escalate to human rather than guessing.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ======================================================================
+       Ticket Deep-Dive & Review Drawer (Side-by-Side Modal)
+       ====================================================================== -->
+  <div class="drawer-backdrop" id="ticketDetailDrawer">
+    <div class="drawer-content">
+      <div class="drawer-header">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.25rem;">
+            <a href="#" target="_blank" class="ticket-link" id="drawerJiraLink" style="font-size: 1.1rem;">
+              <span id="drawerTicketId">EN-XXXXX</span> ↗
+            </a>
+            <span class="badge badge-correct" id="drawerMetaGroundTruth">Ground Truth</span>
+          </div>
+          <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-main);" id="drawerSummary">Summary text</div>
+        </div>
+        <button class="btn btn-ghost" onclick="closeTicketDetailDrawer()" style="font-size: 1.25rem;">✕</button>
+      </div>
+
+      <div class="drawer-body">
+        <!-- Jira Metadata Bar -->
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; background: var(--bg-card); padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border-subtle); font-size: 0.775rem;">
+          <div><span style="color: var(--text-dim);">Priority:</span> <strong id="drawerMetaPriority">P0</strong></div>
+          <div><span style="color: var(--text-dim);">Assignee:</span> <strong id="drawerMetaAssignee">--</strong></div>
+          <div><span style="color: var(--text-dim);">Reporter:</span> <strong id="drawerMetaReporter">--</strong></div>
+          <div><span style="color: var(--text-dim);">Human Action:</span> <strong id="drawerMetaAction">--</strong></div>
+        </div>
+
+        <!-- AI Output Inspection Card -->
+        <div class="detail-section-card">
+          <div class="detail-section-title">
+            <span>🤖 AI Triage Prediction</span>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span class="badge" id="drawerAiClass">AI Classification</span>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">Confidence: <strong id="drawerAiConfidence">--%</strong></span>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-dim);">
+              Human Review Flag: <strong id="drawerAiHumanReview">Not Required</strong>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">AI Reasoning:</label>
+            <div style="font-size: 0.825rem; color: var(--text-main); background: var(--bg-surface); padding: 0.75rem; border-radius: 6px; line-height: 1.45;" id="drawerAiReason"></div>
+          </div>
+
+          <!-- Evidence vs Inference Distinction -->
+          <div class="evidence-box">
+            <div class="evidence-title">✓ Verified Evidence & Signals</div>
+            <div style="font-size: 0.8rem; color: var(--text-main); white-space: pre-line;" id="drawerAiEvidence"></div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; font-size: 0.8rem;">
+            <div>
+              <span style="color: var(--text-dim);">Recommended Action:</span>
+              <div style="margin-top: 0.2rem; font-weight: 600;" id="drawerAiAction">--</div>
+            </div>
+            <div>
+              <span style="color: var(--text-dim);">Suggested Owner:</span>
+              <div style="margin-top: 0.2rem; font-weight: 600;" id="drawerAiOwner">--</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Human Reviewer Evaluation Form -->
+        <div class="detail-section-card" style="border-color: var(--border-focus);">
+          <div class="detail-section-title" style="color: var(--primary-light);">
+            <span>👤 Product Analyst Review & Audit</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <div class="form-group">
+              <label class="form-label">Reviewer Decision</label>
+              <select class="form-control" id="reviewDecisionSelect">
+                <option value="Correct">✓ Correct (Accept AI Prediction)</option>
+                <option value="Incorrect">✗ Incorrect (Override AI Prediction)</option>
+                <option value="Needs Manual Triage">⚡ Needs Manual Triage (Escalate)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Final Ground Truth Classification</label>
+              <select class="form-control" id="correctClassSelect">
+                <option value="Bug">Bug</option>
+                <option value="Config">Config</option>
+                <option value="Change Request">Change Request</option>
+                <option value="Needs Manual Triage">Needs Manual Triage</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Feedback Type (Root Cause Taxonomy)</label>
+            <select class="form-control" id="feedbackTypeSelect">
+              <option value="">-- Select if incorrect or uncertain --</option>
+              <option value="Wrong classification">Wrong classification</option>
+              <option value="Insufficient evidence">Insufficient evidence</option>
+              <option value="Expected behavior misunderstood">Expected behavior misunderstood</option>
+              <option value="Actual behavior misunderstood">Actual behavior misunderstood</option>
+              <option value="Configuration mistaken for Bug">Configuration mistaken for Bug</option>
+              <option value="Change Request mistaken for Bug">Change Request mistaken for Bug</option>
+              <option value="Change Request mistaken for Config">Change Request mistaken for Config</option>
+              <option value="Bug mistaken for Config">Bug mistaken for Config</option>
+              <option value="Unsupported assumption">Unsupported assumption</option>
+              <option value="Reason incorrect">Reason incorrect</option>
+              <option value="Evidence incorrect">Evidence incorrect</option>
+              <option value="Recommended action incorrect">Recommended action incorrect</option>
+              <option value="Suggested owner incorrect">Suggested owner incorrect</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <!-- Component Quality Scorecard -->
+          <div style="margin: 1rem 0;">
+            <label class="form-label" style="margin-bottom: 0.5rem; display: block;">Triage Response Quality Ratings</label>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; font-size: 0.75rem;">
+              <div>
+                <span style="color: var(--text-dim); display: block; margin-bottom: 0.2rem;">Reason:</span>
+                <select class="form-control" id="ratingReason" style="padding: 0.35rem;">
+                  <option value="Good">Good</option>
+                  <option value="Needs Improvement">Needs Improvement</option>
+                  <option value="Incorrect">Incorrect</option>
+                </select>
+              </div>
+              <div>
+                <span style="color: var(--text-dim); display: block; margin-bottom: 0.2rem;">Evidence:</span>
+                <select class="form-control" id="ratingEvidence" style="padding: 0.35rem;">
+                  <option value="Good">Good</option>
+                  <option value="Needs Improvement">Needs Improvement</option>
+                  <option value="Incorrect">Incorrect</option>
+                </select>
+              </div>
+              <div>
+                <span style="color: var(--text-dim); display: block; margin-bottom: 0.2rem;">Next Action:</span>
+                <select class="form-control" id="ratingAction" style="padding: 0.35rem;">
+                  <option value="Good">Good</option>
+                  <option value="Needs Improvement">Needs Improvement</option>
+                  <option value="Incorrect">Incorrect</option>
+                </select>
+              </div>
+              <div>
+                <span style="color: var(--text-dim); display: block; margin-bottom: 0.2rem;">Owner:</span>
+                <select class="form-control" id="ratingOwner" style="padding: 0.35rem;">
+                  <option value="Good">Good</option>
+                  <option value="Needs Improvement">Needs Improvement</option>
+                  <option value="Incorrect">Incorrect</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Reviewer Comments / Explanation</label>
+            <textarea class="form-control" id="reviewerComment" placeholder="Explain why the classification or recommended action was accepted or modified..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="drawer-footer">
+        <button class="btn btn-secondary" onclick="closeTicketDetailDrawer()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveTicketReviewForm()">Save Evaluation</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Quick Help Modal (Detailed Knowledge Center) -->
+  <div class="modal-backdrop" id="globalHelpModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+          <span style="font-size: 1.4rem;">🎓</span>
+          <div>
+            <h3 style="font-size: 1.15rem; font-weight: 800; color: var(--text-main); letter-spacing: -0.01em;">
+              Triage Bot Evaluator — Complete User Guide & Knowledge Base
+            </h3>
+            <p style="font-size: 0.775rem; color: var(--text-dim);">
+              Everything you need to know to evaluate models, enforce triage rules, audit errors, and improve prompts
+            </p>
+          </div>
+        </div>
+        <button class="btn btn-ghost" onclick="closeGlobalHelpModal()" style="font-size: 1.25rem;">✕</button>
+      </div>
+
+      <!-- Modal Sub-Navigation Bar -->
+      <div class="modal-subnav">
+        <button class="modal-tab-btn active" data-modaltab="workflow" onclick="switchModalGuideTab('workflow')">
+          🚀 1. End-to-End Workflow
+        </button>
+        <button class="modal-tab-btn" data-modaltab="rules" onclick="switchModalGuideTab('rules')">
+          ⚖️ 2. Triage Decision Rules
+        </button>
+        <button class="modal-tab-btn" data-modaltab="metrics" onclick="switchModalGuideTab('metrics')">
+          📊 3. Metrics & Confusion Matrix
+        </button>
+        <button class="modal-tab-btn" data-modaltab="reviews" onclick="switchModalGuideTab('reviews')">
+          🎯 4. Reviewer Actions & Taxonomy
+        </button>
+        <button class="modal-tab-btn" data-modaltab="tuning" onclick="switchModalGuideTab('tuning')">
+          🔄 5. Ingestion & Prompt Tuning
+        </button>
+      </div>
+
+      <div class="modal-body">
+        
+        <!-- PANE 1: WORKFLOW & MODES -->
+        <div class="modal-tab-pane active" id="modaltab_workflow">
+          <div class="guide-callout info">
+            <span>ℹ️</span>
+            <div>
+              <strong>Understanding the Two Evaluation Modes:</strong>
+              The tool separates <em>historical benchmarking</em> from <em>live sprint evaluation</em> so you never risk data contamination or unvalidated assumptions.
+            </div>
+          </div>
+
+          <div class="patterns-grid" style="margin: 1rem 0 0.5rem 0;">
+            <div class="rule-card">
+              <div class="rule-card-title">🏛️ Mode A: Historical Baseline (100 Tickets)</div>
+              <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.45;">
+                <strong>Purpose:</strong> Benchmark and test model accuracy against locked ground truth.<br>
+                <strong>Source:</strong> <code>100ClassifiedPastTickets.csv</code> (49 Bug, 19 Config, 32 Change Request).<br>
+                <strong>Protection:</strong> Anti-leakage safeguards ensure the AI never sees human classifications during testing.<br>
+                <strong>Best for:</strong> A/B testing prompt modifications and validating candidate models.
+              </p>
+            </div>
+
+            <div class="rule-card">
+              <div class="rule-card-title">⚡ Mode B: Current Sprint Live Evaluation (52 Tickets)</div>
+              <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.45;">
+                <strong>Purpose:</strong> Evaluate fresh backlog tickets awaiting operational resolution.<br>
+                <strong>Source:</strong> <code>RawDataCurrentSprint.csv</code>.<br>
+                <strong>Workflow:</strong> Backlog labels start as <em>provisional / pending</em>. The Product Analyst reviews AI recommendations and establishes authoritative ground truth.<br>
+                <strong>Best for:</strong> Daily sprint triage and backlog automation.
+              </p>
+            </div>
+          </div>
+
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-top: 1rem;">The 5-Step Evaluation Lifecycle</h4>
+          <div class="guide-step-grid">
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 1</span>
+              <div class="guide-step-title">Ingest AI Predictions</div>
+              <div class="guide-step-desc">Upload batch model results via CSV/JSON in the <strong>+ Ingest AI Run</strong> tab. Verify auto-matched column headers.</div>
+            </div>
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 2</span>
+              <div class="guide-step-title">Audit the Dashboard</div>
+              <div class="guide-step-desc">Check Attempted Accuracy, Macro F1, and examine the <strong>High-Confidence Error Spotlight</strong> for risky hallucinations.</div>
+            </div>
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 3</span>
+              <div class="guide-step-title">Simulate Cutoffs</div>
+              <div class="guide-step-desc">Use the <strong>Threshold Slider</strong> to see how many tickets can be safely automated vs escalated to manual review.</div>
+            </div>
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 4</span>
+              <div class="guide-step-title">Triage in Review Queue</div>
+              <div class="guide-step-desc">Use <strong>[✓ Correct]</strong>, <strong>[✗ Override]</strong>, or <strong>[⚡ Escalate]</strong> to validate tickets with 1 click.</div>
+            </div>
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 5</span>
+              <div class="guide-step-title">Iterate Prompts</div>
+              <div class="guide-step-desc">Export the Error Report CSV, feed the mistake patterns back into your LLM prompt, and compare candidate runs!</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANE 2: TRIAGE DECISION RULES -->
+        <div class="modal-tab-pane" id="modaltab_rules">
+          <div class="guide-callout tip">
+            <span>💡</span>
+            <div>
+              <strong>The Golden Principle:</strong>
+              Always ask: <em>"What is the product supposed to do today?"</em> Never classify based only on what the requester calls the problem!
+            </div>
+          </div>
+
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-top: 1rem;">The 5 Authoritative Decision Rules</h4>
+          <div class="patterns-grid" style="margin-top: 0.5rem;">
+            <div class="rule-card">
+              <div class="rule-card-title">Rule 1 — Expected Behavior First</div>
+              <p style="font-size: 0.775rem; color: var(--text-muted);">Identify what the system is intended to do today. If expected behavior cannot be established, do not infer it solely from ticket wording.</p>
+            </div>
+            <div class="rule-card">
+              <div class="rule-card-title">Rule 2 — Never Rely on Keywords</div>
+              <p style="font-size: 0.775rem; color: var(--text-muted);">Words like <em>bug, error, enhancement, issue, duplicate</em> are surface signals only. They must never independently decide the class.</p>
+            </div>
+            <div class="rule-card">
+              <div class="rule-card-title">Rule 3 — Separate Cause from Fix Method</div>
+              <p style="font-size: 0.775rem; color: var(--text-muted);">A DB query fix does NOT make an issue Config. Engineering involvement does NOT make it a Change Request. Classify on requirements.</p>
+            </div>
+            <div class="rule-card">
+              <div class="rule-card-title">Rule 4 & 5 — Use Evidence & Escalate</div>
+              <p style="font-size: 0.775rem; color: var(--text-muted);">Prefer reproduction steps and config checks. If evidence is conflicting, low-confidence, or ambiguous, escalate to <strong>Needs Manual Triage</strong>.</p>
+            </div>
+          </div>
+
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-top: 1rem;">Category Comparison & Real Historical Benchmarks</h4>
+          <table class="guide-table">
+            <thead>
+              <tr>
+                <th style="width: 130px;">Category</th>
+                <th>Definition & Core Test</th>
+                <th>First Practical Action</th>
+                <th>Historical Benchmark Case</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="badge badge-bug">🐛 Bug</span></td>
+                <td>Existing supported functionality violates intended specification.</td>
+                <td>Reproduce and compare Expected vs Actual outcome in QA/staging.</td>
+                <td><strong>EA-14529</strong>: Registration age displayed as <code>34.1835616...</code>. Remediated by DB query, but confirmed as genuine Bug.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-config">⚙️ Config</span></td>
+                <td>Product already supports the outcome, but center setup or permission prevents it.</td>
+                <td>Verify feature toggles, center permissions, and account data state.</td>
+                <td><strong>EA-14523</strong>: <em>"Same PO number generated"</em> sounds like a bug, but sequence was working per center prefix configuration!</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-cr">🚀 Change Request</span></td>
+                <td>Requested outcome is brand-new functionality or intentionally alters product behavior.</td>
+                <td>Conduct product & engineering feasibility assessment; scope user story.</td>
+                <td><strong>EA-14539</strong>: <em>"Test Bulk Consumption incorrectly displays Success"</em>. Adding validation check is an intentional behavior change.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-manual">❓ Needs Manual Triage</span></td>
+                <td>Evidence is insufficient, contradictory, or below approved confidence threshold.</td>
+                <td>Request missing console logs, reproduction payload, or arrange call.</td>
+                <td><strong>EN-12847</strong>: QR scan failure lacked mobile version and lighting conditions; escalated to avoid guessing.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- PANE 3: METRICS & CONFUSION MATRIX -->
+        <div class="modal-tab-pane" id="modaltab_metrics">
+          <div class="guide-callout danger">
+            <span>🚨</span>
+            <div>
+              <strong>Why We Don't Rely on Basic Accuracy Alone:</strong>
+              Simple accuracy can look high (e.g. 85%) while hiding that 100% of Configuration issues are being misclassified as Bugs, or that the bot is making dangerous high-confidence hallucinations!
+            </div>
+          </div>
+
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-top: 1rem;">Understanding the Key Metrics</h4>
+          <table class="guide-table">
+            <thead>
+              <tr>
+                <th style="width: 170px;">Metric</th>
+                <th style="width: 180px;">Formula</th>
+                <th>What It Tells You</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Attempted Accuracy</strong></td>
+                <td><code>Correct / (Correct + Incorrect)</code></td>
+                <td>Accuracy specifically when the AI committed to a definitive triage decision (excluding abstentions).</td>
+              </tr>
+              <tr>
+                <td><strong>Macro F1-Score</strong></td>
+                <td><code>Average(F1_Bug, F1_Config, F1_CR)</code></td>
+                <td>Balanced metric giving equal weight to all classes. Prevents high Bug volume from hiding poor Config accuracy.</td>
+              </tr>
+              <tr>
+                <td><strong>Precision</strong></td>
+                <td><code>TP / (TP + FP)</code></td>
+                <td>When the AI predicts a class (e.g. Bug), how often is it actually that class? (Measures false alarm rate).</td>
+              </tr>
+              <tr>
+                <td><strong>Recall</strong></td>
+                <td><code>TP / (TP + FN)</code></td>
+                <td>Out of all actual tickets in a class, how many did the AI successfully catch? (Measures leak rate).</td>
+              </tr>
+              <tr>
+                <td><strong>High-Risk Error Count</strong></td>
+                <td><code>Incorrect & Conf &ge; Threshold</code></td>
+                <td>The count of tickets where the model was confident (&ge; 80%) but wrong. Priority #1 for engineering fixes.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-top: 1rem;">Interactive Confusion Matrix (4×4)</h4>
+          <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.45;">
+            The matrix rows represent what the <strong>AI predicted</strong>, while columns represent the <strong>Human Ground Truth</strong>.
+            <br>
+            <strong>Interactive Drilldown:</strong> Click on <em>any cell</em> in the matrix (such as <em>AI Bug ➔ Human Config</em>) and the app will instantly switch to the Evaluation Studio table filtered exclusively for those exact tickets!
+          </p>
+
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-top: 1rem;">Confidence Threshold Simulator</h4>
+          <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.45;">
+            Drag the slider between <strong>50% and 95%</strong> to model operational deployment.
+            It displays:
+            <strong>Automated Tickets</strong> (safe to route directly), <strong>Escalated Tickets</strong> (sent to humans), and the resulting <strong>Automation Error Rate</strong>.
+            The goal is to find the highest automation percentage that keeps error rate under 3%.
+          </p>
+        </div>
+
+        <!-- PANE 4: REVIEWER ACTIONS & ERROR TAXONOMY -->
+        <div class="modal-tab-pane" id="modaltab_reviews">
+          <div class="guide-callout tip">
+            <span>🎯</span>
+            <div>
+              <strong>Audit Integrity Rule:</strong>
+              A reviewer's override establishes the final ground truth for evaluation, but <strong>never erases</strong> the original AI output. Both are preserved side-by-side for audits.
+            </div>
+          </div>
+
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-top: 1rem;">The 3 Reviewer Actions Explained</h4>
+          <div class="patterns-grid" style="margin-top: 0.5rem;">
+            <div class="rule-card">
+              <div class="rule-card-title">1. [✓ Correct] (Fast Confirmation)</div>
+              <p style="font-size: 0.775rem; color: var(--text-muted); line-height: 1.45;">
+                Confirms the AI classification is accurate. Updates the ticket status to <strong>Reviewed</strong>, increments correct counts, and marks the review card completed.
+              </p>
+            </div>
+            <div class="rule-card">
+              <div class="rule-card-title">2. [✗ Override] (Detailed Correction)</div>
+              <p style="font-size: 0.775rem; color: var(--text-muted); line-height: 1.45;">
+                Opens the Deep-Dive drawer. Requires selecting the <strong>Correct Classification</strong>, one of <strong>14 Root-Cause Error Types</strong>, and rating response quality.
+              </p>
+            </div>
+            <div class="rule-card">
+              <div class="rule-card-title">3. [⚡ Escalate] (Manual Triage)</div>
+              <p style="font-size: 0.775rem; color: var(--text-muted); line-height: 1.45;">
+                Pulls uncertain tickets out of automation into human engineering triage. Removes high-risk false alarms from automated error counts.
+              </p>
+            </div>
+          </div>
+
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-top: 1rem;">The 14 Root-Cause Error Taxonomy Categories</h4>
+          <table class="guide-table">
+            <thead>
+              <tr>
+                <th style="width: 220px;">Feedback Tag</th>
+                <th>When to Select This Tag</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Configuration mistaken for Bug</strong></td>
+                <td>AI called it a defect, but feature capability exists and issue is account setup or permission.</td>
+              </tr>
+              <tr>
+                <td><strong>Change Request mistaken for Bug</strong></td>
+                <td>AI mistook user's request for new behavior or validation as an existing code defect.</td>
+              </tr>
+              <tr>
+                <td><strong>Bug mistaken for Config</strong></td>
+                <td>AI assumed user had wrong settings, but existing software behavior was genuinely broken.</td>
+              </tr>
+              <tr>
+                <td><strong>Expected behavior misunderstood</strong></td>
+                <td>AI misread the product specification or intended workflow rules.</td>
+              </tr>
+              <tr>
+                <td><strong>Unsupported assumption</strong></td>
+                <td>AI hallucinated facts (e.g. claimed a permission was disabled when no Jira evidence existed).</td>
+              </tr>
+              <tr>
+                <td><strong>Insufficient evidence</strong></td>
+                <td>Ticket lacked logs/reproduction details, but AI forced a guess instead of escalating.</td>
+              </tr>
+              <tr>
+                <td><strong>Recommended action incorrect</strong></td>
+                <td>Classification was correct, but suggested next step was invalid or counter-productive.</td>
+              </tr>
+              <tr>
+                <td><strong>Suggested owner incorrect</strong></td>
+                <td>AI routed ticket to the wrong team based on available Jira metadata.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- PANE 5: INGESTION & PROMPT TUNING -->
+        <div class="modal-tab-pane" id="modaltab_tuning">
+          <div class="guide-callout info">
+            <span>🔄</span>
+            <div>
+              <strong>How to Train & Improve the Model by Adding More Jira Tickets:</strong>
+              Training an LLM triage bot isn't just about throwing thousands of random tickets at it—it is about finding <em>tricky edge cases</em>, capturing human corrections, and feeding those lessons back into your prompt.
+            </div>
+          </div>
+
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-top: 1rem;">The 6-Step Efficient Training Loop</h4>
+          <div class="guide-step-grid" style="margin-top: 0.5rem;">
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 1</span>
+              <div class="guide-step-title">1. Export Diverse Tickets</div>
+              <div class="guide-step-desc">Gather 30–50 fresh Jira tickets across different modules (CRM, Inventory, Billing, Interfaces). Include tickets that were resolved via DB query or configuration to test edge cases.</div>
+            </div>
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 2</span>
+              <div class="guide-step-title">2. Batch Predict with AI</div>
+              <div class="guide-step-desc">Run your LLM over the batch. Output the 6 core fields formatted per <a href="SAMPLE_IMPORT_TEMPLATE.csv" download style="color: var(--accent-cyan); font-weight: 600;">SAMPLE_IMPORT_TEMPLATE.csv</a> (Ticket ID, AI Classification, Confidence, Reason, Evidence, Next Action).</div>
+            </div>
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 3</span>
+              <div class="guide-step-title">3. Ingest into the Tool</div>
+              <div class="guide-step-desc">Go to <strong>+ Ingest AI Run</strong>. Upload the file, confirm the auto-matched columns, assign a clear tag (e.g. <code>Claude 3.5 - Sprint 42</code>), and validate.</div>
+            </div>
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 4</span>
+              <div class="guide-step-title">4. Human Review & Tagging</div>
+              <div class="guide-step-desc">Open the <strong>Review Queue</strong>. Click <strong>[✗ Override]</strong> on mistakes, assign the true classification, tag the root cause (e.g. <em>Configuration mistaken for Bug</em>), and write a quick reason.</div>
+            </div>
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 5</span>
+              <div class="guide-step-title">5. Export Error Report</div>
+              <div class="guide-step-desc">Go to <strong>Export Center &rarr; Download Error Report CSV</strong>. This is your "Mistake Notebook" containing all high-value edge cases with reviewer explanations.</div>
+            </div>
+            <div class="guide-step-card">
+              <span class="guide-step-num">Step 6</span>
+              <div class="guide-step-title">6. Update Prompt / Fine-Tune</div>
+              <div class="guide-step-desc">Add the top 5–10 confused tickets as <strong>Few-Shot Examples</strong> in your system prompt. Re-run your bot, ingest as <code>Run B</code>, and use <strong>Model Comparison</strong> to verify accuracy gains!</div>
+            </div>
+          </div>
+
+          <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-top: 1rem;">Why This Training Strategy Works</h4>
+          <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.45;">
+            • <strong>Eliminates Keyword Blindspots</strong>: LLMs naturally latch onto words like <em>"duplicate"</em> or <em>"error"</em>. Teaching the model with real historical tickets (like <code>EA-14523</code> where duplicate PO numbers were actually center configuration) permanently cures false positive bugs.<br>
+            • <strong>Measurable Progress</strong>: In the <strong>Model Comparison</strong> tab, the <strong>Shift Analysis</strong> immediately shows which tickets were cured (<em>Fixed</em>) vs which got broken (<em>Regressed</em>), guaranteeing you never ship a regression to production!
+          </p>
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <div style="font-size: 0.775rem; color: var(--text-dim);">
+          Keyboard Shortcut: Press <kbd style="background: var(--bg-app); border: 1px solid var(--border-subtle); padding: 0.15rem 0.4rem; border-radius: 4px; font-family: monospace;">ESC</kbd> to close guide
+        </div>
+        <button class="btn btn-primary" onclick="closeGlobalHelpModal()">
+          Ready to Evaluate! 🚀
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Embedded Data & App Logic -->
+  <script src="seed-data.js"></script>
+  <script src="baseline_runs.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

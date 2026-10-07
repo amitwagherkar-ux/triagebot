@@ -1,0 +1,53 @@
+JIRA ID,Ticket ID,Jira Summary,Classification,Human Action Taken,Last Comments,Verification Description,Bot Action,Assignee,Reporter,Priority
+EN-13245,https://crelio.atlassian.net/browse/EN-13245,[#1000771] Physicians Toxicology [B] - Delayed Sync Issue Creating Duplicate/Late Accession Numbers,Bug,,,https://crelio.atlassian.net/browse/EN-13245?focusedCommentId=145912,,Aman,Chandni Guthula,0
+EN-13155,https://crelio.atlassian.net/browse/EN-13155,Old Values issue in the report while viewing the report PDF sent on WhatsApp,Bug,,,https://crelio.atlassian.net/browse/EN-13155?focusedCommentId=145019,,Gurushesh,,0
+EN-13239,https://crelio.atlassian.net/browse/EN-13239,Selective Review is not working. Getting error as ''This page isn’t working'',Bug,Fixed,https://crelio.atlassian.net/browse/EN-13239?focusedCommentId=146759,https://crelio.atlassian.net/browse/EN-13239?focusedCommentId=145778,,Rasul,Fahim / Prajakta,0
+EN-13247,https://crelio.atlassian.net/browse/EN-13247,Duplicate test are reflecting in the bills - Prime Diagnostics #1000999,Bug,,,https://crelio.atlassian.net/browse/EN-13247?focusedCommentId=145921,,Rohit Rasam,Suraj Chaudhary ,0
+EN-13252,https://crelio.atlassian.net/browse/EN-13252,Add Test to Bill functionality is giving error,Bug,,https://crelio.atlassian.net/browse/EN-13252?focusedCommentId=146969,https://crelio.atlassian.net/browse/EN-13252?focusedCommentId=145947,,Rohit Rasam,Dhairyasheel,0
+EA-14934,https://crelio.atlassian.net/browse/EA-14934,8915 Unable to update any Organizations from Org Management from a specific user.,Config,,https://crelio.atlassian.net/browse/EN-13308?focusedCommentId=146820,https://crelio.atlassian.net/browse/EN-13308?focusedCommentId=146558,,ROhit Rasam,Abhimanyu Bhosale,0
+EN-13356,https://crelio.atlassian.net/browse/EN-13356,Dates and Month got interchanged with each other.,Bug,,,https://crelio.atlassian.net/browse/EN-13356?focusedCommentId=147019,,,,0
+EA-14949,https://crelio.atlassian.net/browse/EA-14949,Error while enabling linearity check,Bug,,,https://crelio.atlassian.net/browse/EN-13303,,Aakash,Pratilsha,1
+EA-14898,https://crelio.atlassian.net/browse/EA-14898,"The Center Logo is not being displayed on the user-end dashboard. Instead, the Live Health logo is being displayed.",Bug,,,https://crelio.atlassian.net/browse/EN-13319?focusedCommentId=146563,,Aditya P,Abhimanyu Bhosale,1
+EA-14855,https://crelio.atlassian.net/browse/EA-14855,Lab Logo Not Visible on Top-Left Corner,Bug,,,,,Aditya P,Aditi Salunkhe,1
+EN-13340,https://crelio.atlassian.net/browse/EN-13340,QC Violation Alert Emails Not Being Received,Bug,,https://crelio.atlassian.net/browse/EN-13340?focusedCommentId=146986,,,Aman,,1
+EA-14894,https://crelio.atlassian.net/browse/EA-14894,{BUG} Test Count Mismatch Between V4 & V5 Operations Waiting List,Bug,,,https://crelio.atlassian.net/browse/EN-13311?focusedCommentId=146576,,Gurushesh,Suraj Todkar,1
+EA-14853,https://crelio.atlassian.net/browse/EA-14853,#12094 Bill Ids skipped,Bug,,,https://crelio.atlassian.net/browse/EN-13313?focusedCommentId=146597,,Gurushesh,Dhairyasheel Shinde,1
+EN-13228,https://crelio.atlassian.net/browse/EN-13228,[PathMD] Unable to edit the AOE,Config,Working as expected,https://crelio.atlassian.net/browse/EN-13228?focusedCommentId=146964,,,Hasan,Pankaj Nautiyal,1
+EN-13227,https://crelio.atlassian.net/browse/EN-13227,#560 AOE Configuration Export issue,Bug,,,https://crelio.atlassian.net/browse/EN-13227?focusedCommentId=145714,,Hasan,Dhairyasheel,1
+EN-13159,https://crelio.atlassian.net/browse/EN-13159,12284 Key Imaging-Error when viewing DICOM study in patient portal,Bug,,,https://crelio.atlassian.net/browse/EN-13159?focusedCommentId=146953,,Hasan,Sandeep Pawar,1
+EA-14876,https://crelio.atlassian.net/browse/EA-14876,Store Side bar Items not getting translated,Bug,,,,,Hasan,Suraj Todkar,1
+EA-14863,https://crelio.atlassian.net/browse/EA-14863,#7489 Duplicate tests are appearing in the Waiting List under the same Bill ID.,Bug,,,https://crelio.atlassian.net/browse/EN-13315?focusedCommentId=146596,,Hasan,Abhimanyu Bhosale,1
+EN-13341,https://crelio.atlassian.net/browse/EN-13341,The PO is not being sent to the vendor even after enabling the Email flag while raising the PO.,Bug,,,https://crelio.atlassian.net/browse/EN-13341?focusedCommentId=146869,,Joash,,1
+EA-14931,https://crelio.atlassian.net/browse/EA-14931,{BUG} B2B WhatsApp Communication Not Working for Referral/Organization,Bug,,,,,Joash,Suraj Todkar,1
+EA-14826,https://crelio.atlassian.net/browse/EA-14826,#13005 EXCEL LABORATORY [B]- Email Report Log on report Sent Dashboard Not Showing,Config,,,https://crelio.atlassian.net/browse/EN-13309?focusedCommentId=145331,,Joash,Vashim Pathan,1
+EA-14930,https://crelio.atlassian.net/browse/EA-14930,Incorrect Outsourced Lab Update Activity - 1657 Jeevan Scientific,Config,,,https://crelio.atlassian.net/browse/EN-13318?focusedCommentId=146606,,Neha,Vamshi Krishna Kabade,1
+EA-14854,https://crelio.atlassian.net/browse/EA-14854,Footer is not getting updated correctly from Center Management.,Bug,,,https://crelio.atlassian.net/browse/EN-13317?focusedCommentId=146598,,Nilesh,Abhimanyu Bhosale,1
+EA-14950,https://crelio.atlassian.net/browse/EA-14950,"System is not allowing to un-check ""Set as Normal Range"" while performing Bulk Actions - Enable Auto Approval / Auto Dispatch",Bug,,,,,Nilesh,Pratilsha,1
+EN-13293,https://crelio.atlassian.net/browse/EN-13293,#6000026 KK Bandar Seri Putra -  Malaysia Server - The client wants to notify the referring doctor via email whenever a sample is dismissed or redrawn/recollect sample.,Change Request,Enhancement,,,,Pragati,Abhijeet Kukade,1
+EA-14933,https://crelio.atlassian.net/browse/EA-14933,Multiple barcode printing for order-level print,Change Request,New Feature,,,,Rasul,Saksham Sharma,1
+EA-14942,https://crelio.atlassian.net/browse/EA-14942,Unable to reset the password using the Forgot Password option.,Bug,,,https://crelio.atlassian.net/browse/EN-13304?focusedCommentId=146553,,Rasul,Akshay Dhanawade,1
+EA-14947,https://crelio.atlassian.net/browse/EA-14947,General Instructions Formatting issue (1001071 Life Well Cadence Labs),Bug,,,,,Rasul,ShekhAashiq ALMahaboob,1
+EA-14922,https://crelio.atlassian.net/browse/EA-14922,{BUG} POS Machine Details Not Appearing in Device List,Bug,,,,,Rasul,Suraj Todkar,1
+EA-14915,https://crelio.atlassian.net/browse/EA-14915,Issue with Test Code Showing as Undefined – Profile Management,Bug,,,https://crelio.atlassian.net/browse/EN-13312?focusedCommentId=146611,,Rasul,Sanskriti Sharma,1
+EA-14887,https://crelio.atlassian.net/browse/EA-14887,"#12791 ACCURAD DIAGNOSTICS- System skipped bill ID while billing, RCA required.",Bug,Fixed-RCA,,https://crelio.atlassian.net/browse/EN-13307?focusedCommentId=146578,,Rasul,Vashim Pathan,1
+EA-14862,https://crelio.atlassian.net/browse/EA-14862,#4278 Bill cancelled still the tests are showing in the waiting list,Bug,Fixed-RCA,,https://crelio.atlassian.net/browse/EN-13306?focusedCommentId=146594,,Rasul,Dhairyasheel Shinde,1
+EN-13322,https://crelio.atlassian.net/browse/EN-13322,Sample Recollection / Redraw – Instant Comments Not Reflecting from Old Center Management,Bug,,,https://crelio.atlassian.net/browse/EN-13322?focusedCommentId=146771,,Rohit Rasam,,1
+EA-14842,https://crelio.atlassian.net/browse/EA-14842,Client needs provision to Show Profiles Test when checked from Calculate Price .,Change Request,Enhancement,,,,Rohit Rasam,Suraj Todkar,1
+EN-13352,https://crelio.atlassian.net/browse/EN-13352,Test Status Changed to Incomplete and Uploaded Report Missing,Bug,,,,,,,1
+EN-13126,https://crelio.atlassian.net/browse/EN-13126,Enhance Supplier Payment Management with Ledger View and Additional Payment Tracking Details,Change Request,Enhancement,,,,,Hrushikesh,1
+EA-14920,https://crelio.atlassian.net/browse/EA-14920,#1073 Need to enable B2B and referral messages,Change Request,Task,,,,,Dhairyasheel Shinde,1
+EA-14918,https://crelio.atlassian.net/browse/EA-14918,"Critical Callout Worklist — Multi-SPOC Support, Audit Trail Redesign, Export Enhancements & Submit Gating",Change Request,Enhancement,,,,,Saksham Sharma,1
+EA-14874,https://crelio.atlassian.net/browse/EA-14874,Accession number generated incorrect for specific patient,Bug,,,https://crelio.atlassian.net/browse/EN-13310?focusedCommentId=146222,,,Abhimanyu Bhosale,1
+EA-14846,https://crelio.atlassian.net/browse/EA-14846,Instant Comment (Report Comment) and On-Hold Button in Operations Waiting List (1001039 Berries Health and Genetics Laboratory),Change Request,Enhancement,,,,Gurushesh,ShekhAashiq ALMahaboob,1
+EN-12884,https://crelio.atlassian.net/browse/EN-12884,Metrosihat lab xinle printer configuration,Change Request,Task,,,,Aman,Sandeep Pawar,2
+EA-14661,https://crelio.atlassian.net/browse/EA-14661,Migrate Master Test List from V4 to V5,Change Request,Enhancement,,,,Aman,Rohit Tiwari,2
+EA-14865,https://crelio.atlassian.net/browse/EA-14865,[MOB]{backend}Multi-Centre API Revamp,Change Request,Enhancement,,,,Pragati,JIYA,2
+EA-14476,https://crelio.atlassian.net/browse/EA-14476,Inventory Transfer Acceptance Workflow for Stock Transfers Between Warehouse and Operations,Change Request,Enhancement,,,,Pragati,Aseem Ansari,2
+EA-14629,https://crelio.atlassian.net/browse/EA-14629,Need to remove Whitelabelled Patient and Doctors app from Play store,Change Request,Task,,,,,Mazhar,2
+EA-14750,https://crelio.atlassian.net/browse/EA-14750,Need to identify total size of data in the lab - #1796 Lifecare Diagnostics,Change Request,Task,,,,,Rahul Barge,2
+EN-13206,https://crelio.atlassian.net/browse/EN-13206,[Prime Diagnostics] Fix Test-Wise Insurance Export to filter the sentout test vs tests processed in-house,Change Request,Enhancement,,,,,Swati,2
+EN-13249,https://crelio.atlassian.net/browse/EN-13249,"LOINC, SNOMED CT & CPT Integration Enhancements",Change Request,Enhancement,,,,,JIYA,2
+EA-14946,https://crelio.atlassian.net/browse/EA-14946,Issues in New Build of Interfacing application,Bug,,,,,,Nisar Choudhary,2
+EA-14929,https://crelio.atlassian.net/browse/EA-14929,Migrate Master Test List from V4 to V5,Change Request,Enhancement,,,,,JIYA,2
+EA-14891,https://crelio.atlassian.net/browse/EA-14891,{BUG} Result-Entry Pointer Overlapping Parameter Entry Area in V5,Change Request,Enhancement,,,,,Suraj Todkar,2
+EA-14830,https://crelio.atlassian.net/browse/EA-14830,Feature request-Sample wise bulk registration,Change Request,New Feature,,,,,Prajakta,2
