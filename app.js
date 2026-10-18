@@ -62,6 +62,12 @@ function loadStoredData() {
   AppState.historicalTickets = window.SEED_HISTORICAL_TICKETS || [];
   AppState.sprintTickets = window.SEED_SPRINT_TICKETS || [];
 
+  // Dynamically update dataset badges in UI
+  const histBadge = document.querySelector('.mode-btn[data-mode="HISTORICAL"] .mode-badge');
+  if (histBadge) histBadge.textContent = AppState.historicalTickets.length;
+  const sprintBadge = document.querySelector('.mode-btn[data-mode="CURRENT_SPRINT"] .mode-badge');
+  if (sprintBadge) sprintBadge.textContent = AppState.sprintTickets.length;
+
   // Load Model Runs from localStorage or fall back to preloaded
   const storedRuns = localStorage.getItem('triage_model_runs');
   if (storedRuns) {
