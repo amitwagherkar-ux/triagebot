@@ -23,12 +23,15 @@
         <span class="brand-badge">v2.0 Enterprise</span>
 
         <!-- Mode Switcher -->
-        <div class="mode-toggle-group" style="margin-left: 1.5rem;">
-          <button class="mode-btn active" data-mode="HISTORICAL" title="Evaluate against 100 historically triaged tickets with locked human ground truth">
+        <div class="mode-toggle-group" style="margin-left: 1.5rem; display: flex; align-items: center; gap: 0.45rem;">
+          <button class="mode-btn active" data-mode="HISTORICAL" title="Evaluate against historically triaged tickets with locked human ground truth">
             🏛️ Historical Baseline <span class="mode-badge">100</span>
           </button>
-          <button class="mode-btn" data-mode="CURRENT_SPRINT" title="Live evaluation of 52 raw Jira tickets awaiting product analyst triage validation">
+          <button class="mode-btn" data-mode="CURRENT_SPRINT" title="Live evaluation of raw Jira tickets awaiting product analyst triage validation">
             ⚡ Current Sprint <span class="mode-badge">52</span>
+          </button>
+          <button class="btn btn-secondary btn-sm" onclick="openDatasetAppendView()" title="Upload Excel or CSV file to append tickets to Historical Baseline or Current Sprint" style="padding: 0.35rem 0.65rem; font-size: 0.775rem; border-radius: 8px; border: 1px dashed rgba(99, 102, 241, 0.45); background: rgba(99, 102, 241, 0.08); display: inline-flex; align-items: center; gap: 0.35rem;">
+            ➕ Append Data
           </button>
         </div>
       </div>
@@ -719,7 +722,25 @@
         </div>
       </div>
 
-      <div class="import-container">
+      <!-- Sub-mode Selector: Model Predictions vs Dataset Tickets -->
+      <div class="import-subnav-pills">
+        <div class="btn-group">
+          <button class="btn btn-primary btn-sm" id="btn_import_type_model" onclick="switchImportType('model')">
+            🤖 Ingest AI Run Predictions
+          </button>
+          <button class="btn btn-secondary btn-sm" id="btn_import_type_dataset" onclick="switchImportType('dataset')">
+            📂 Append Dataset Tickets (CSV / Excel)
+          </button>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-muted); background: var(--bg-card); padding: 0.35rem 0.85rem; border-radius: 9999px; border: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 0.75rem;">
+          <span>🏛️ Historical: <strong id="statsHistCount" style="color: var(--text-main);">100</strong> tickets</span>
+          <span style="color: var(--border-main);">|</span>
+          <span>⚡ Sprint: <strong id="statsSprintCount" style="color: var(--text-main);">52</strong> tickets</span>
+        </div>
+      </div>
+
+      <!-- Container 1: Model Run Ingest -->
+      <div class="import-container" id="importContainer_model">
         <!-- Upload Card -->
         <div class="content-card">
           <h3 class="card-title" style="margin-bottom: 0.5rem;">Ingest AI Evaluation Results</h3>
@@ -782,6 +803,90 @@
           <div style="margin-top: 1.5rem; text-align: right;">
             <button class="btn btn-primary" id="importConfirmBtn" disabled onclick="executeImport()">
               Validate & Import Run
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Container 2: Append Dataset Ground-Truth Tickets -->
+      <div class="import-container hidden" id="importContainer_dataset">
+        <!-- Upload Dataset Tickets Card -->
+        <div class="content-card">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem;">
+            <h3 class="card-title">Append Ground-Truth Jira Tickets</h3>
+            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-weight: 700;">CSV + Excel Support</span>
+          </div>
+          <p class="card-subtitle" style="margin-bottom: 1.25rem;">
+            Upload an Excel workbook (<code>.xlsx</code>, <code>.xls</code>) or <code>.csv</code> file to add more tickets into the Historical Baseline or Current Sprint dataset.
+          </p>
+
+          <div class="dropzone" id="datasetDropzone" onclick="document.getElementById('datasetFileInput').click()">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">📊</div>
+            <div style="font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;" id="datasetDropzoneTitle">Click to upload Excel (.xlsx, .xls) or CSV</div>
+            <div style="font-size: 0.775rem; color: var(--text-dim);" id="datasetDropzoneSub">Auto-detects Jira ID, summary, classification, resolution & metadata</div>
+            <input type="file" id="datasetFileInput" accept=".csv,.xlsx,.xls" style="display: none;">
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.25rem;">
+            <a href="SAMPLE_HISTORICAL_TICKETS_TEMPLATE.csv" download class="btn btn-secondary btn-sm" title="Download sample template for Historical Baseline">
+              ⬇ Historical Template (CSV)
+            </a>
+            <a href="SAMPLE_SPRINT_TICKETS_TEMPLATE.csv" download class="btn btn-secondary btn-sm" title="Download sample template for Current Sprint">
+              ⬇ Sprint Template (CSV)
+            </a>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Target Dataset to Append To</label>
+            <select class="form-control" id="appendTargetDataset" onchange="onAppendTargetDatasetChange()">
+              <option value="HISTORICAL">🏛️ Historical Baseline (Locked Ground Truth)</option>
+              <option value="CURRENT_SPRINT">⚡ Current Sprint (Backlog Triage Pool)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Duplicate Handling Strategy</label>
+            <select class="form-control" id="appendDuplicateStrategy">
+              <option value="skip">Skip duplicates (Keep existing ticket if JIRA ID matches)</option>
+              <option value="update">Update existing (Overwrite matching ticket with new values)</option>
+            </select>
+          </div>
+
+          <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-secondary btn-sm" onclick="exportCurrentDatasetCSV('HISTORICAL')" title="Export full current Historical Baseline as CSV">
+                ⬇ Export Historical CSV
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="exportCurrentDatasetCSV('CURRENT_SPRINT')" title="Export full current Sprint Backlog as CSV">
+                ⬇ Export Sprint CSV
+              </button>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="resetDatasetToOriginalSeeds()" title="Reset datasets back to original seeds" style="color: #f87171; border-color: rgba(239, 68, 68, 0.35);">
+              ↺ Reset to Original Seeds
+            </button>
+          </div>
+        </div>
+
+        <!-- Dataset Column Mapping & Integrity Card -->
+        <div class="content-card">
+          <h3 class="card-title" style="margin-bottom: 0.5rem;">Dataset Column Mapping & Integrity Check</h3>
+          <p class="card-subtitle" style="margin-bottom: 1rem;">
+            Verify or adjust incoming column mappings. Automatic synonym matching is applied.
+          </p>
+
+          <div id="datasetColumnMappingContainer">
+            <div style="padding: 3rem; text-align: center; color: var(--text-dim); font-size: 0.85rem;">
+              Upload an Excel or CSV file on the left to activate dataset column mapping.
+            </div>
+          </div>
+
+          <div id="datasetValidationErrors" style="display: none; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 1rem; margin-top: 1rem; font-size: 0.8rem;"></div>
+
+          <div id="datasetImportPreview" style="margin-top: 1rem;"></div>
+
+          <div style="margin-top: 1.5rem; text-align: right;">
+            <button class="btn btn-primary" id="datasetConfirmBtn" disabled onclick="executeDatasetAppend()">
+              Validate & Append Tickets
             </button>
           </div>
         </div>
@@ -1732,6 +1837,7 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <!-- Embedded Data & App Logic -->
+  <script src="xlsx.mini.min.js"></script>
   <script src="seed-data.js"></script>
   <script src="baseline_runs.js"></script>
   <script src="app.js"></script>

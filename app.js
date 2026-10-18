@@ -58,15 +58,30 @@ function initApp() {
 }
 
 function loadStoredData() {
-  // Load baseline tickets from window seeds
-  AppState.historicalTickets = window.SEED_HISTORICAL_TICKETS || [];
-  AppState.sprintTickets = window.SEED_SPRINT_TICKETS || [];
+  // Load baseline tickets from localStorage (if user appended) or fall back to window seeds
+  const storedHist = localStorage.getItem('triage_custom_historical_tickets');
+  if (storedHist) {
+    try {
+      AppState.historicalTickets = JSON.parse(storedHist);
+    } catch (e) {
+      AppState.historicalTickets = window.SEED_HISTORICAL_TICKETS || [];
+    }
+  } else {
+    AppState.historicalTickets = window.SEED_HISTORICAL_TICKETS || [];
+  }
 
-  // Dynamically update dataset badges in UI
-  const histBadge = document.querySelector('.mode-btn[data-mode="HISTORICAL"] .mode-badge');
-  if (histBadge) histBadge.textContent = AppState.historicalTickets.length;
-  const sprintBadge = document.querySelector('.mode-btn[data-mode="CURRENT_SPRINT"] .mode-badge');
-  if (sprintBadge) sprintBadge.textContent = AppState.sprintTickets.length;
+  const storedSprint = localStorage.getItem('triage_custom_sprint_tickets');
+  if (storedSprint) {
+    try {
+      AppState.sprintTickets = JSON.parse(storedSprint);
+    } catch (e) {
+      AppState.sprintTickets = window.SEED_SPRINT_TICKETS || [];
+    }
+  } else {
+    AppState.sprintTickets = window.SEED_SPRINT_TICKETS || [];
+  }
+
+  updateDatasetModeBadges();
 
   // Load Model Runs from localStorage or fall back to preloaded
   const storedRuns = localStorage.getItem('triage_model_runs');
@@ -1659,6 +1674,435 @@ function executeImport() {
 }
 
 // ==========================================================================
+// 4B. Dataset Append Engine (CSV & Excel for Historical Baseline & Current Sprint)
+// ==========================================================================
+
+function updateDatasetModeBadges() {
+  const histLen = AppState.historicalTickets ? AppState.historicalTickets.length : 0;
+  const sprintLen = AppState.sprintTickets ? AppState.sprintTickets.length : 0;
+
+  const histBadge = document.querySelector('.mode-btn[data-mode="HISTORICAL"] .mode-badge');
+  if (histBadge) histBadge.textContent = histLen;
+  const sprintBadge = document.querySelector('.mode-btn[data-mode="CURRENT_SPRINT"] .mode-badge');
+  if (sprintBadge) sprintBadge.textContent = sprintLen;
+
+  const statsHist = document.getElementById('statsHistCount');
+  if (statsHist) statsHist.textContent = histLen;
+  const statsSprint = document.getElementById('statsSprintCount');
+  if (statsSprint) statsSprint.textContent = sprintLen;
+
+  // Sync dropdown options
+  const optImportHist = document.querySelector('#importTargetDataset option[value="HISTORICAL"]');
+  if (optImportHist) optImportHist.textContent = `Historical Baseline (${histLen} Tickets)`;
+  const optImportSprint = document.querySelector('#importTargetDataset option[value="CURRENT_SPRINT"]');
+  if (optImportSprint) optImportSprint.textContent = `Current Sprint (${sprintLen} Tickets)`;
+
+  const optAppendHist = document.querySelector('#appendTargetDataset option[value="HISTORICAL"]');
+  if (optAppendHist) optAppendHist.textContent = `🏛️ Historical Baseline (${histLen} Tickets)`;
+  const optAppendSprint = document.querySelector('#appendTargetDataset option[value="CURRENT_SPRINT"]');
+  if (optAppendSprint) optAppendSprint.textContent = `⚡ Current Sprint (${sprintLen} Tickets)`;
+}
+
+const DatasetIngestEngine = {
+  rawRows: [],
+  headers: [],
+  fileName: '',
+
+  detectColumnMapping(headers) {
+    const mapping = {
+      jira_id: '',
+      summary: '',
+      classification: '',
+      human_action: '',
+      priority: '',
+      assignee: '',
+      reporter: '',
+      ticket_url: ''
+    };
+
+    const syns = {
+      jira_id: ['jira id', 'ticket id', 'issue id', 'issue key', 'key', 'id'],
+      summary: ['jira summary', 'summary', 'issue title', 'title', 'description', 'issue'],
+      classification: ['classification', 'human classification', 'ground truth', 'expected classification', 'class', 'type'],
+      human_action: ['human action taken', 'human action', 'action taken', 'resolution', 'developer action', 'action'],
+      priority: ['priority', 'severity', 'sev', 'level'],
+      assignee: ['assignee', 'assigned to', 'developer', 'owner'],
+      reporter: ['reporter', 'reported by', 'author', 'creator'],
+      ticket_url: ['ticket url', 'url', 'jira link', 'link', 'web link']
+    };
+
+    headers.forEach(h => {
+      const lower = h.toLowerCase().trim();
+      Object.keys(syns).forEach(k => {
+        if (!mapping[k] && syns[k].some(s => lower === s || lower.includes(s))) {
+          mapping[k] = h;
+        }
+      });
+    });
+
+    return mapping;
+  }
+};
+
+function switchImportType(type) {
+  const btnModel = document.getElementById('btn_import_type_model');
+  const btnDataset = document.getElementById('btn_import_type_dataset');
+  const containerModel = document.getElementById('importContainer_model');
+  const containerDataset = document.getElementById('importContainer_dataset');
+
+  if (type === 'dataset') {
+    if (btnModel) { btnModel.className = 'btn btn-secondary btn-sm'; }
+    if (btnDataset) { btnDataset.className = 'btn btn-primary btn-sm'; }
+    if (containerModel) containerModel.classList.add('hidden');
+    if (containerDataset) containerDataset.classList.remove('hidden');
+  } else {
+    if (btnModel) { btnModel.className = 'btn btn-primary btn-sm'; }
+    if (btnDataset) { btnDataset.className = 'btn btn-secondary btn-sm'; }
+    if (containerModel) containerModel.classList.remove('hidden');
+    if (containerDataset) containerDataset.classList.add('hidden');
+  }
+}
+
+function openDatasetAppendView(dataset) {
+  switchTab('import');
+  switchImportType('dataset');
+  if (dataset) {
+    const sel = document.getElementById('appendTargetDataset');
+    if (sel) sel.value = dataset;
+  }
+  const el = document.getElementById('importContainer_dataset');
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function onAppendTargetDatasetChange() {
+  if (DatasetIngestEngine.headers && DatasetIngestEngine.headers.length > 0) {
+    renderDatasetColumnMapper(DatasetIngestEngine.headers, DatasetIngestEngine.rawRows, DatasetIngestEngine.fileName);
+  }
+}
+
+function handleDatasetFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const fileName = file.name;
+  const lowerName = fileName.toLowerCase();
+  const isExcel = lowerName.endsWith('.xlsx') || lowerName.endsWith('.xls');
+
+  const titleEl = document.getElementById('datasetDropzoneTitle');
+  const subEl = document.getElementById('datasetDropzoneSub');
+  if (titleEl) titleEl.textContent = `Loaded: ${fileName}`;
+  if (subEl) subEl.textContent = `${(file.size / 1024).toFixed(1)} KB | Processing rows...`;
+
+  if (isExcel) {
+    if (typeof XLSX === 'undefined') {
+      showToast('Excel parser library loading, please try again or use CSV.', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+        if (!rawJson || rawJson.length === 0) {
+          showToast('Excel sheet contains no data rows.', 'error');
+          return;
+        }
+
+        const headers = Object.keys(rawJson[0]);
+        processDatasetRawRows(headers, rawJson, fileName);
+      } catch (err) {
+        showToast('Error reading Excel workbook: ' + err.message, 'error');
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    // CSV
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const text = e.target.result;
+      const parsedLines = IngestEngine.parseCSV(text);
+      if (parsedLines.length < 2) {
+        showToast('CSV must contain a header row and at least one data row', 'error');
+        return;
+      }
+      const headers = parsedLines[0].map(h => h.trim());
+      const rows = parsedLines.slice(1).map(r => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = r[i] || '');
+        return obj;
+      });
+      processDatasetRawRows(headers, rows, fileName);
+    };
+    reader.readAsText(file);
+  }
+}
+
+function processDatasetRawRows(headers, rows, fileName) {
+  DatasetIngestEngine.rawRows = rows;
+  DatasetIngestEngine.headers = headers;
+  DatasetIngestEngine.fileName = fileName;
+
+  renderDatasetColumnMapper(headers, rows, fileName);
+  showToast(`Parsed ${rows.length} tickets from ${fileName}. Please verify column mappings.`, 'info');
+}
+
+function renderDatasetColumnMapper(headers, rows, fileName) {
+  const mapping = DatasetIngestEngine.detectColumnMapping(headers);
+  const container = document.getElementById('datasetColumnMappingContainer');
+  if (!container) return;
+
+  const targetDataset = document.getElementById('appendTargetDataset')?.value || 'HISTORICAL';
+  const isHistorical = targetDataset === 'HISTORICAL';
+
+  const fields = [
+    { key: 'jira_id', label: 'JIRA ID / Key (Required)', required: true },
+    { key: 'summary', label: 'Jira Summary / Title (Required)', required: true },
+    { key: 'classification', label: `Classification (Bug/Config/CR) ${isHistorical ? '(Required)' : '(Optional)'}`, required: isHistorical },
+    { key: 'human_action', label: 'Human Action Taken / Resolution', required: false },
+    { key: 'priority', label: 'Priority / Severity', required: false },
+    { key: 'assignee', label: 'Assignee', required: false },
+    { key: 'reporter', label: 'Reporter', required: false },
+    { key: 'ticket_url', label: 'Ticket Link / URL (Auto-generated if empty)', required: false }
+  ];
+
+  let html = `
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+      <h4 style="color: var(--text-main); margin: 0;">Confirm Column Mapping (${rows.length} rows)</h4>
+      <span style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: 700;">Target: ${isHistorical ? 'Historical Baseline' : 'Current Sprint'}</span>
+    </div>
+    <table class="mapping-table">
+      <tbody>
+  `;
+
+  fields.forEach(f => {
+    html += `
+      <tr>
+        <td style="width: 250px; font-weight: 600;">
+          ${f.label} ${f.required ? '<span style="color: #f87171;">*</span>' : ''}
+        </td>
+        <td>
+          <select class="filter-select" id="dsmap_${f.key}">
+            <option value="">-- None / Skip --</option>
+            ${headers.map(h => `<option value="${escapeHtml(h)}" ${mapping[f.key] === h ? 'selected' : ''}>${escapeHtml(h)}</option>`).join('')}
+          </select>
+        </td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table>`;
+  container.innerHTML = html;
+
+  const confirmBtn = document.getElementById('datasetConfirmBtn');
+  if (confirmBtn) confirmBtn.disabled = false;
+
+  const preview = document.getElementById('datasetImportPreview');
+  if (preview) {
+    preview.innerHTML = `
+      <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; padding: 0.75rem; font-size: 0.8rem; color: var(--text-muted);">
+        ℹ️ Ready to append: <strong>${escapeHtml(fileName)}</strong> (${rows.length} incoming rows). Click "Validate & Append Tickets" to add to <strong>${isHistorical ? 'Historical Baseline' : 'Current Sprint'}</strong>.
+      </div>
+    `;
+  }
+}
+
+function executeDatasetAppend() {
+  const targetDataset = document.getElementById('appendTargetDataset').value;
+  const duplicateStrategy = document.getElementById('appendDuplicateStrategy').value;
+
+  const mapping = {
+    jira_id: document.getElementById('dsmap_jira_id')?.value,
+    summary: document.getElementById('dsmap_summary')?.value,
+    classification: document.getElementById('dsmap_classification')?.value,
+    human_action: document.getElementById('dsmap_human_action')?.value,
+    priority: document.getElementById('dsmap_priority')?.value,
+    assignee: document.getElementById('dsmap_assignee')?.value,
+    reporter: document.getElementById('dsmap_reporter')?.value,
+    ticket_url: document.getElementById('dsmap_ticket_url')?.value
+  };
+
+  if (!mapping.jira_id || !mapping.summary) {
+    showToast('JIRA ID and Jira Summary columns must be mapped.', 'error');
+    return;
+  }
+
+  if (targetDataset === 'HISTORICAL' && !mapping.classification) {
+    showToast('Classification (Bug / Config / Change Request) is required for Historical Baseline.', 'error');
+    return;
+  }
+
+  const rawRows = DatasetIngestEngine.rawRows || [];
+  const errors = [];
+  const validTickets = [];
+  const validClasses = ['Bug', 'Config', 'Change Request'];
+
+  rawRows.forEach((r, idx) => {
+    const rowNum = idx + 2;
+    const jiraId = (r[mapping.jira_id] || '').trim();
+    const summary = (r[mapping.summary] || '').trim();
+
+    if (!jiraId) {
+      errors.push(`Row ${rowNum}: Missing JIRA ID.`);
+      return;
+    }
+    if (!summary) {
+      errors.push(`Row ${rowNum} (${jiraId}): Missing Jira Summary.`);
+      return;
+    }
+
+    let cls = (mapping.classification && r[mapping.classification] ? r[mapping.classification] : '').trim();
+    if (targetDataset === 'HISTORICAL') {
+      const matched = validClasses.find(c => c.toLowerCase() === cls.toLowerCase());
+      if (!matched) {
+        errors.push(`Row ${rowNum} (${jiraId}): Invalid classification '${cls}'. Must be Bug, Config, or Change Request.`);
+        return;
+      }
+      cls = matched;
+    } else {
+      const matched = validClasses.find(c => c.toLowerCase() === cls.toLowerCase());
+      cls = matched || (cls || 'Bug');
+    }
+
+    const ticketUrl = (mapping.ticket_url && r[mapping.ticket_url]) 
+      ? r[mapping.ticket_url].trim() 
+      : `https://crelio.atlassian.net/browse/${jiraId}`;
+
+    validTickets.push({
+      "JIRA ID": jiraId,
+      "Ticket ID": ticketUrl,
+      "Jira Summary": summary,
+      "Classification": cls,
+      "Human Action Taken": (mapping.human_action && r[mapping.human_action]) ? r[mapping.human_action].trim() : '',
+      "Last Comments": '',
+      "Verification Description": '',
+      "Bot Action": '',
+      "Assignee": (mapping.assignee && r[mapping.assignee]) ? r[mapping.assignee].trim() : '',
+      "Reporter": (mapping.reporter && r[mapping.reporter]) ? r[mapping.reporter].trim() : '',
+      "Priority": (mapping.priority && r[mapping.priority]) ? r[mapping.priority].trim() : '1'
+    });
+  });
+
+  const errorBox = document.getElementById('datasetValidationErrors');
+  if (errors.length > 0) {
+    if (errorBox) {
+      errorBox.style.display = 'block';
+      errorBox.innerHTML = `
+        <strong style="color: #f87171;">Validation failed (${errors.length} errors found):</strong>
+        <ul style="margin-top: 0.5rem; max-height: 150px; overflow-y: auto; padding-left: 1.25rem;">
+          ${errors.slice(0, 10).map(e => `<li>${escapeHtml(e)}</li>`).join('')}
+          ${errors.length > 10 ? `<li>... and ${errors.length - 10} more errors</li>` : ''}
+        </ul>
+      `;
+    }
+    showToast(`Validation failed with ${errors.length} errors. Please check the error list.`, 'error');
+    return;
+  }
+
+  if (errorBox) errorBox.style.display = 'none';
+
+  let targetArray = targetDataset === 'HISTORICAL' ? AppState.historicalTickets : AppState.sprintTickets;
+  let addedCount = 0;
+  let updatedCount = 0;
+  let skippedCount = 0;
+
+  validTickets.forEach(newT => {
+    const existingIdx = targetArray.findIndex(t => t['JIRA ID'].trim() === newT['JIRA ID'].trim());
+    if (existingIdx !== -1) {
+      if (duplicateStrategy === 'update') {
+        targetArray[existingIdx] = Object.assign({}, targetArray[existingIdx], newT);
+        updatedCount++;
+      } else {
+        skippedCount++;
+      }
+    } else {
+      targetArray.push(newT);
+      addedCount++;
+    }
+  });
+
+  // Save to localStorage
+  saveDatasetToStorage(targetDataset);
+
+  // Update UI and recompute views
+  updateDatasetModeBadges();
+  refreshAllViews();
+
+  const preview = document.getElementById('datasetImportPreview');
+  if (preview) {
+    preview.innerHTML = `
+      <div style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 8px; padding: 0.85rem; color: #6ee7b7; font-size: 0.85rem;">
+        ✅ <strong>Successfully Appended!</strong><br>
+        Added <strong>+${addedCount}</strong> new tickets, updated <strong>${updatedCount}</strong>, skipped <strong>${skippedCount}</strong>.<br>
+        New total in <strong>${targetDataset === 'HISTORICAL' ? 'Historical Baseline' : 'Current Sprint'}</strong>: <strong>${targetArray.length}</strong> tickets.
+      </div>
+    `;
+  }
+
+  showToast(`Appended +${addedCount} tickets to ${targetDataset === 'HISTORICAL' ? 'Historical Baseline' : 'Current Sprint'}! Total: ${targetArray.length}`, 'success');
+}
+
+function saveDatasetToStorage(targetDataset) {
+  if (targetDataset === 'HISTORICAL') {
+    localStorage.setItem('triage_custom_historical_tickets', JSON.stringify(AppState.historicalTickets));
+  } else {
+    localStorage.setItem('triage_custom_sprint_tickets', JSON.stringify(AppState.sprintTickets));
+  }
+}
+
+function exportCurrentDatasetCSV(targetDataset) {
+  const tickets = targetDataset === 'HISTORICAL' ? AppState.historicalTickets : AppState.sprintTickets;
+  const fileName = targetDataset === 'HISTORICAL' ? '100ClassifiedPastTickets.csv' : 'RawDataCurrentSprint.csv';
+
+  const headers = [
+    'JIRA ID', 'Ticket ID', 'Jira Summary', 'Classification', 'Human Action Taken',
+    'Last Comments', 'Verification Description', 'Assignee', 'Reporter', 'Priority'
+  ];
+
+  const rows = tickets.map(t => [
+    t['JIRA ID'] || '',
+    t['Ticket ID'] || '',
+    t['Jira Summary'] || '',
+    t['Classification'] || '',
+    t['Human Action Taken'] || '',
+    t['Last Comments'] || '',
+    t['Verification Description'] || '',
+    t['Assignee'] || '',
+    t['Reporter'] || '',
+    t['Priority'] || ''
+  ]);
+
+  downloadCSV(fileName, headers, rows);
+}
+
+function resetDatasetToOriginalSeeds() {
+  if (!confirm('Are you sure you want to reset datasets back to the original seeds (100 Historical / 52 Sprint)? Any appended tickets will be cleared.')) {
+    return;
+  }
+  localStorage.removeItem('triage_custom_historical_tickets');
+  localStorage.removeItem('triage_custom_sprint_tickets');
+  AppState.historicalTickets = [...(window.SEED_HISTORICAL_TICKETS || [])];
+  AppState.sprintTickets = [...(window.SEED_SPRINT_TICKETS || [])];
+  updateDatasetModeBadges();
+  refreshAllViews();
+  showToast('Reset datasets to original seeds (100 Historical / 52 Sprint)', 'info');
+
+  const preview = document.getElementById('datasetImportPreview');
+  if (preview) {
+    preview.innerHTML = `
+      <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 0.75rem; font-size: 0.8rem; color: #fca5a5;">
+        ↺ Datasets reset to default seeds.
+      </div>
+    `;
+  }
+}
+
+// ==========================================================================
 // 5. Data Export Engine (CSV & JSON)
 // ==========================================================================
 
@@ -1894,10 +2338,16 @@ function setupEventListeners() {
     });
   }
 
-  // File Upload Dropzone
+  // File Upload Dropzone - AI Runs
   const fileInput = document.getElementById('csvFileInput');
   if (fileInput) {
     fileInput.addEventListener('change', handleFileUpload);
+  }
+
+  // File Upload Dropzone - Dataset Tickets (Excel / CSV)
+  const datasetFileInput = document.getElementById('datasetFileInput');
+  if (datasetFileInput) {
+    datasetFileInput.addEventListener('change', handleDatasetFileUpload);
   }
 
   // Global Keyboard Shortcuts

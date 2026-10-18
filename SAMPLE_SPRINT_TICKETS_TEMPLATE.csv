@@ -1,0 +1,4 @@
+JIRA ID,Ticket ID,Jira Summary,Classification,Human Action Taken,Last Comments,Verification Description,Bot Action,Assignee,Reporter,Priority
+EA-15101,https://crelio.atlassian.net/browse/EA-15101,Bulk patient barcode print alignment error on Zebra printers,Bug,,https://crelio.atlassian.net/browse/EA-15101?comment=1,https://crelio.atlassian.net/browse/EA-15101?desc=1,,Rohit Rasam,Suraj Chaudhary,1
+EA-15102,https://crelio.atlassian.net/browse/EA-15102,Need department-wise access restriction for radiologist users,Change Request,Enhancement,,,,,Prajakta,2
+EN-13550,https://crelio.atlassian.net/browse/EN-13550,Sample accessioning status reverted unexpectedly upon page refresh,Bug,,https://crelio.atlassian.net/browse/EN-13550?comment=1,https://crelio.atlassian.net/browse/EN-13550?desc=1,,Aman,Nisar,0

@@ -1582,6 +1582,20 @@ body {
   gap: 1.5rem;
 }
 
+.import-container.hidden {
+  display: none !important;
+}
+
+.import-subnav-pills {
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
 .dropzone {
   border: 2px dashed var(--border-subtle);
   border-radius: 12px;
