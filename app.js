@@ -2478,7 +2478,7 @@ const TAB_CATEGORY_MAP = {
   'import': 'historical_results',
   'export': 'historical_results',
 
-  // Current Ticket Queue
+  // Tickets Queue
   'evaluation': 'current_run',
   'review': 'current_run',
 
@@ -2501,7 +2501,7 @@ const TAB_NAME_MAP = {
 const CATEGORY_META = {
   'current_run': {
     id: 'current_run',
-    name: 'Current Ticket Queue',
+    name: 'Tickets Queue',
     icon: '⚡',
     defaultTab: 'evaluation',
     tabs: ['evaluation', 'review']

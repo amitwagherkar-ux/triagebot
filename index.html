@@ -15,12 +15,8 @@
     <div class="header-top">
       <div class="brand-section">
         <a href="#" class="brand-logo">
-          <div class="brand-icon">C</div>
-          <div>
-            <div class="brand-title">Auto Triage Evaluator</div>
-          </div>
+          <div class="brand-title">Auto Triage Evaluator</div>
         </a>
-        <span class="brand-badge">v2.0 Enterprise</span>
 
         <!-- Mode Switcher -->
         <div class="mode-toggle-group" style="margin-left: 1.5rem; display: flex; align-items: center; gap: 0.45rem;">
@@ -66,9 +62,9 @@
       <!-- Tier 1: Main Category Switcher Bar -->
       <div class="category-nav-bar">
         <div class="category-nav-tabs">
-          <button class="category-btn" data-category="current_run" onclick="switchCategory('current_run')" title="Switch to Current Ticket Queue (Shortcut: Press 1)">
+          <button class="category-btn" data-category="current_run" onclick="switchCategory('current_run')" title="Switch to Tickets Queue (Shortcut: Press 1)">
             <span class="cat-btn-icon">⚡</span>
-            <span class="cat-btn-text">Current Ticket Queue</span>
+            <span class="cat-btn-text">Tickets Queue</span>
             <span class="cat-press-hint">Press <kbd class="kbd-cat">1</kbd></span>
           </button>
           <button class="category-btn active" data-category="historical_results" onclick="switchCategory('historical_results')" title="Switch to Historical Results (Shortcut: Press 2)">
@@ -106,7 +102,7 @@
 
       <!-- Tier 2: Sub-Navigation Tabs for Active Category -->
       <div class="category-subnav-bar">
-        <!-- Sub-tabs for Current Ticket Queue -->
+        <!-- Sub-tabs for Tickets Queue -->
         <ul class="nav-tabs category-subtabs" data-parent-category="current_run" style="display: none;">
           <li>
             <button class="nav-tab-btn" data-tab="evaluation">
@@ -1227,7 +1223,7 @@
             </tr>
             <tr>
               <td>Press <kbd>1</kbd></td>
-              <td>Switch to <strong>Current Ticket Queue</strong> category</td>
+              <td>Switch to <strong>Tickets Queue</strong> category</td>
               <td>Global Navigation</td>
             </tr>
             <tr>

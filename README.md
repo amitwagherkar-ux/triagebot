@@ -1,4 +1,4 @@
-# CrelioHealth AI Triage Evaluator (v2.0 Enterprise)
+# CrelioHealth AI Triage Evaluator
 
 A full-fledged, dependency-free evaluation platform for measuring, analyzing, and improving AI models that classify Jira tickets into:
 1. **Bug**
@@ -37,10 +37,10 @@ Then open your browser and navigate to:
   * Verified baseline distribution: **Bug (49)**, **Config (19)**, **Change Request (32)**.
   * Measures model classification accuracy, confusion patterns, precision, recall, and F1.
   * Strict anti-leakage safeguards (human classification is never exposed to model inputs).
-* **⚡ Mode B — Current Sprint Live Evaluation (52 Tickets)**:
+* **⚡ Mode B — Next Sprint Live Evaluation (52 Tickets)**:
   * Evaluates fresh backlog tickets (`RawDataCurrentSprint.csv`).
   * Treats supplied sprint classifications as provisional labels until validated.
-  * Dedicated **Product Analyst Review Queue** for 1-click validation or classification overrides.
+  * Dedicated **Product Analyst Review** for 1-click validation or classification overrides.
 
 ### 2. Multi-Dimensional Performance Metrics
 * **Accuracy on Attempted**: Evaluates predictions excluding abstentions (`Correct / (Correct + Incorrect)`).
