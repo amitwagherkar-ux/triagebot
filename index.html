@@ -28,9 +28,9 @@
             🏛️ Historical Baseline
           </button>
           <button class="mode-btn" data-mode="CURRENT_SPRINT" title="Live evaluation of raw Jira tickets awaiting product analyst triage validation">
-            ⚡ Current Sprint
+            ⚡ Next Sprint
           </button>
-          <button class="btn btn-secondary btn-sm" onclick="openDatasetAppendView()" title="Upload Excel or CSV file to append tickets to Historical Baseline or Current Sprint" style="padding: 0.35rem 0.65rem; font-size: 0.775rem; border-radius: 8px; border: 1px dashed rgba(99, 102, 241, 0.45); background: rgba(99, 102, 241, 0.08); display: inline-flex; align-items: center; gap: 0.35rem;">
+          <button class="btn btn-secondary btn-sm" onclick="openDatasetAppendView()" title="Upload Excel or CSV file to append tickets to Historical Baseline or Next Sprint" style="padding: 0.35rem 0.65rem; font-size: 0.775rem; border-radius: 8px; border: 1px dashed rgba(99, 102, 241, 0.45); background: rgba(99, 102, 241, 0.08); display: inline-flex; align-items: center; gap: 0.35rem;">
             ➕ Append Data
           </button>
         </div>
@@ -66,9 +66,9 @@
       <!-- Tier 1: Main Category Switcher Bar -->
       <div class="category-nav-bar">
         <div class="category-nav-tabs">
-          <button class="category-btn" data-category="current_run" onclick="switchCategory('current_run')" title="Switch to Current Run (Shortcut: Press 1)">
+          <button class="category-btn" data-category="current_run" onclick="switchCategory('current_run')" title="Switch to Current Ticket Queue (Shortcut: Press 1)">
             <span class="cat-btn-icon">⚡</span>
-            <span class="cat-btn-text">Current Run</span>
+            <span class="cat-btn-text">Current Ticket Queue</span>
             <span class="cat-press-hint">Press <kbd class="kbd-cat">1</kbd></span>
           </button>
           <button class="category-btn active" data-category="historical_results" onclick="switchCategory('historical_results')" title="Switch to Historical Results (Shortcut: Press 2)">
@@ -89,15 +89,15 @@
             <span>Accuracy:</span>
             <span class="kpi-pill-val success" id="quickAccuracyVal">--%</span>
           </div>
-          <div class="kpi-pill clickable pill-danger" onclick="navigateToHighRiskErrors()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); navigateToHighRiskErrors();}" title="Click to inspect High-Risk Errors in Evaluation Studio" role="button" tabindex="0">
+          <div class="kpi-pill clickable pill-danger" onclick="navigateToHighRiskErrors()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); navigateToHighRiskErrors();}" title="Click to inspect High-Risk Errors in Evaluate" role="button" tabindex="0">
             <span>High-Risk Errors:</span>
             <span class="kpi-pill-val danger" id="quickHighRiskVal">0</span>
           </div>
-          <div class="kpi-pill clickable" onclick="navigateToManualTriage()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); navigateToManualTriage();}" title="Click to inspect Manual Triage tickets in Evaluation Studio" role="button" tabindex="0">
+          <div class="kpi-pill clickable" onclick="navigateToManualTriage()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); navigateToManualTriage();}" title="Click to inspect Manual Triage tickets in Evaluate" role="button" tabindex="0">
             <span>Manual Triage Rate:</span>
             <span class="kpi-pill-val" id="quickAbstainVal">--%</span>
           </div>
-          <div class="kpi-pill clickable pill-warning" onclick="navigateToPendingReviews()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); navigateToPendingReviews();}" title="Click to open Review Queue for pending items" role="button" tabindex="0">
+          <div class="kpi-pill clickable pill-warning" onclick="navigateToPendingReviews()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); navigateToPendingReviews();}" title="Click to open Review for pending items" role="button" tabindex="0">
             <span>Pending Reviews:</span>
             <span class="kpi-pill-val warning" id="quickPendingVal">0</span>
           </div>
@@ -106,16 +106,16 @@
 
       <!-- Tier 2: Sub-Navigation Tabs for Active Category -->
       <div class="category-subnav-bar">
-        <!-- Sub-tabs for Current Run -->
+        <!-- Sub-tabs for Current Ticket Queue -->
         <ul class="nav-tabs category-subtabs" data-parent-category="current_run" style="display: none;">
           <li>
             <button class="nav-tab-btn" data-tab="evaluation">
-              📋 Evaluation Studio
+              📋 Evaluate
             </button>
           </li>
           <li>
             <button class="nav-tab-btn" data-tab="review">
-              🎯 Review Queue <span class="tab-badge" id="badgeReviewCount">0</span>
+              🎯 Review <span class="tab-badge" id="badgeReviewCount">0</span>
             </button>
           </li>
         </ul>
@@ -182,13 +182,13 @@
       <!-- TAB 2: EVALUATION STUDIO -->
     <section class="tab-pane" id="tab_evaluation">
       
-      <!-- Quick Help Guide for Evaluation Studio -->
+      <!-- Quick Help Guide for Evaluate -->
       <div class="page-quick-guide" id="guide_evaluation">
         <div class="guide-header" onclick="toggleGuide('evaluation')">
           <div class="guide-title-wrap">
             <div class="guide-icon-badge">📋</div>
             <div>
-              <div class="guide-title">Quick Guide: Evaluation Studio</div>
+              <div class="guide-title">Quick Guide: Evaluate</div>
               <div class="guide-subtitle">Master table for searching, filtering, and side-by-side inspection</div>
             </div>
           </div>
@@ -332,7 +332,7 @@
 
       <div class="review-queue-header">
         <div>
-          <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main);">Product Analyst Review Queue</h2>
+          <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main);">Product Analyst Review</h2>
           <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.2rem;">
             Focused triage queue for evaluating unverified sprint tickets, conflicting classifications, and high-risk mistakes.
           </p>
@@ -401,7 +401,7 @@
           <div class="kpi-card-sub" id="kpiAccuracySub">Evaluating attempted predictions</div>
         </div>
 
-        <div class="kpi-card highlight-danger" onclick="navigateToHighRiskErrors()" style="cursor: pointer;" title="Click to inspect High-Risk Errors in Evaluation Studio" role="button" tabindex="0">
+        <div class="kpi-card highlight-danger" onclick="navigateToHighRiskErrors()" style="cursor: pointer;" title="Click to inspect High-Risk Errors in Evaluate" role="button" tabindex="0">
           <div class="kpi-card-header">
             <span class="kpi-card-title">High-Risk Errors</span>
             <span class="kpi-card-icon">⚠️</span>
@@ -631,7 +631,7 @@
             <div class="guide-card-head">📂 2. Left Card: Upload & Target</div>
             <div class="guide-card-text">
               • <strong>File Dropzone:</strong> Upload any CSV or JSON prediction file. Click <em>Download Sample CSV Template</em> to inspect the expected schema.<br>
-              • <strong>Target Dataset:</strong> Choose <em>Historical Baseline (100 Tickets)</em> for benchmarks or <em>Current Sprint (52 Tickets)</em> for production triage.<br>
+              • <strong>Target Dataset:</strong> Choose <em>Historical Baseline (100 Tickets)</em> for benchmarks or <em>Next Sprint (52 Tickets)</em> for production triage.<br>
               • <strong>Metadata:</strong> Provide Model Name, Prompt Version, and run notes for clear version tracking.
             </div>
           </div>
@@ -704,7 +704,7 @@
               <div class="guide-step-card">
                 <span class="guide-step-num">Step 4</span>
                 <div class="guide-step-title">Human Review & Error Tagging</div>
-                <div class="guide-step-desc">Open the <strong>Review Queue</strong>. For every ticket the AI got wrong, click <strong>[✗ Override]</strong>, choose the real category, and tag the root cause (e.g. <em>Configuration mistaken for Bug</em>).</div>
+                <div class="guide-step-desc">Open the <strong>Review</strong>. For every ticket the AI got wrong, click <strong>[✗ Override]</strong>, choose the real category, and tag the root cause (e.g. <em>Configuration mistaken for Bug</em>).</div>
               </div>
               <div class="guide-step-card">
                 <span class="guide-step-num">Step 5</span>
@@ -765,7 +765,7 @@
             <label class="form-label">Target Dataset</label>
             <select class="form-control" id="importTargetDataset">
               <option value="HISTORICAL">Historical Baseline (100 Tickets)</option>
-              <option value="CURRENT_SPRINT">Current Sprint (52 Tickets)</option>
+              <option value="CURRENT_SPRINT">Next Sprint (52 Tickets)</option>
             </select>
           </div>
 
@@ -817,7 +817,7 @@
             <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-weight: 700;">CSV + Excel Support</span>
           </div>
           <p class="card-subtitle" style="margin-bottom: 1.25rem;">
-            Upload an Excel workbook (<code>.xlsx</code>, <code>.xls</code>) or <code>.csv</code> file to add more tickets into the Historical Baseline or Current Sprint dataset.
+            Upload an Excel workbook (<code>.xlsx</code>, <code>.xls</code>) or <code>.csv</code> file to add more tickets into the Historical Baseline or Next Sprint dataset.
           </p>
 
           <div class="dropzone" id="datasetDropzone" onclick="document.getElementById('datasetFileInput').click()">
@@ -831,8 +831,8 @@
             <a href="SAMPLE_HISTORICAL_TICKETS_TEMPLATE.csv" download class="btn btn-secondary btn-sm" title="Download sample template for Historical Baseline">
               ⬇ Historical Template (CSV)
             </a>
-            <a href="SAMPLE_SPRINT_TICKETS_TEMPLATE.csv" download class="btn btn-secondary btn-sm" title="Download sample template for Current Sprint">
-              ⬇ Sprint Template (CSV)
+            <a href="SAMPLE_SPRINT_TICKETS_TEMPLATE.csv" download class="btn btn-secondary btn-sm" title="Download sample template for Next Sprint">
+              ⬇ Next Sprint Template (CSV)
             </a>
           </div>
 
@@ -840,7 +840,7 @@
             <label class="form-label">Target Dataset to Append To</label>
             <select class="form-control" id="appendTargetDataset" onchange="onAppendTargetDatasetChange()">
               <option value="HISTORICAL">Historical Baseline</option>
-              <option value="CURRENT_SPRINT">Current Sprint</option>
+              <option value="CURRENT_SPRINT">Next Sprint</option>
             </select>
           </div>
 
@@ -857,8 +857,8 @@
               <button class="btn btn-secondary btn-sm" onclick="exportCurrentDatasetCSV('HISTORICAL')" title="Export full current Historical Baseline as CSV">
                 ⬇ Export Historical CSV
               </button>
-              <button class="btn btn-secondary btn-sm" onclick="exportCurrentDatasetCSV('CURRENT_SPRINT')" title="Export full current Sprint Backlog as CSV">
-                ⬇ Export Sprint CSV
+              <button class="btn btn-secondary btn-sm" onclick="exportCurrentDatasetCSV('CURRENT_SPRINT')" title="Export full current Next Sprint Backlog as CSV">
+                ⬇ Export Next Sprint CSV
               </button>
             </div>
             <button class="btn btn-secondary btn-sm" onclick="resetDatasetToOriginalSeeds()" title="Reset datasets back to original seeds" style="color: #f87171; border-color: rgba(239, 68, 68, 0.35);">
@@ -1212,7 +1212,7 @@
             </tr>
             <tr>
               <td>Press <kbd>/</kbd> or <kbd>Ctrl</kbd> + <kbd>K</kbd></td>
-              <td>Focus Table Search Bar in Evaluation Studio</td>
+              <td>Focus Table Search Bar in Evaluate</td>
               <td>Global</td>
             </tr>
             <tr>
@@ -1227,7 +1227,7 @@
             </tr>
             <tr>
               <td>Press <kbd>1</kbd></td>
-              <td>Switch to <strong>Current Run</strong> category</td>
+              <td>Switch to <strong>Current Ticket Queue</strong> category</td>
               <td>Global Navigation</td>
             </tr>
             <tr>
@@ -1248,7 +1248,7 @@
             <tr>
               <td>Press <kbd>←</kbd> / <kbd>→</kbd></td>
               <td>Navigate Previous / Next Table Page</td>
-              <td>Evaluation Studio Table</td>
+              <td>Evaluate Table</td>
             </tr>
             <tr>
               <td>Press <kbd>E</kbd></td>
@@ -1518,7 +1518,7 @@
             </div>
 
             <div class="rule-card">
-              <div class="rule-card-title">⚡ Mode B: Current Sprint Live Evaluation (52 Tickets)</div>
+              <div class="rule-card-title">⚡ Mode B: Next Sprint Live Evaluation (52 Tickets)</div>
               <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.45;">
                 <strong>Purpose:</strong> Evaluate fresh backlog tickets awaiting operational resolution.<br>
                 <strong>Source:</strong> <code>RawDataCurrentSprint.csv</code>.<br>
@@ -1547,7 +1547,7 @@
             </div>
             <div class="guide-step-card">
               <span class="guide-step-num">Step 4</span>
-              <div class="guide-step-title">Triage in Review Queue</div>
+              <div class="guide-step-title">Triage in Review</div>
               <div class="guide-step-desc">Use <strong>[✓ Correct]</strong>, <strong>[✗ Override]</strong>, or <strong>[⚡ Escalate]</strong> to validate tickets with 1 click.</div>
             </div>
             <div class="guide-step-card">
@@ -1679,7 +1679,7 @@
           <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.45;">
             The matrix rows represent what the <strong>AI predicted</strong>, while columns represent the <strong>Human Ground Truth</strong>.
             <br>
-            <strong>Interactive Drilldown:</strong> Click on <em>any cell</em> in the matrix (such as <em>AI Bug ➔ Human Config</em>) and the app will instantly switch to the Evaluation Studio table filtered exclusively for those exact tickets!
+            <strong>Interactive Drilldown:</strong> Click on <em>any cell</em> in the matrix (such as <em>AI Bug ➔ Human Config</em>) and the app will instantly switch to the Evaluate table filtered exclusively for those exact tickets!
           </p>
 
           <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-main); margin-top: 1rem;">Confidence Threshold Simulator</h4>
@@ -1798,7 +1798,7 @@
             <div class="guide-step-card">
               <span class="guide-step-num">Step 4</span>
               <div class="guide-step-title">4. Human Review & Tagging</div>
-              <div class="guide-step-desc">Open the <strong>Review Queue</strong>. Click <strong>[✗ Override]</strong> on mistakes, assign the true classification, tag the root cause (e.g. <em>Configuration mistaken for Bug</em>), and write a quick reason.</div>
+              <div class="guide-step-desc">Open the <strong>Review</strong>. Click <strong>[✗ Override]</strong> on mistakes, assign the true classification, tag the root cause (e.g. <em>Configuration mistaken for Bug</em>), and write a quick reason.</div>
             </div>
             <div class="guide-step-card">
               <span class="guide-step-num">Step 5</span>

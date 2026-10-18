@@ -447,7 +447,7 @@ function renderRunSelector() {
   const currentModeRuns = AppState.runs.filter(r => r.dataset_target === AppState.currentMode);
   const otherRuns = AppState.runs.filter(r => r.dataset_target !== AppState.currentMode);
 
-  let html = `<optgroup label="Runs for ${AppState.currentMode === 'HISTORICAL' ? 'Historical Baseline' : 'Current Sprint'}">`;
+  let html = `<optgroup label="Runs for ${AppState.currentMode === 'HISTORICAL' ? 'Historical Baseline' : 'Next Sprint'}">`;
   currentModeRuns.forEach(r => {
     html += `<option value="${r.run_id}" ${r.run_id === AppState.currentRunId ? 'selected' : ''}>${escapeHtml(r.model_name)} - ${escapeHtml(r.prompt_version)}</option>`;
   });
@@ -588,7 +588,7 @@ function filterTableByMatrix(aiClass, gtClass) {
   AppState.tableFilters.status = 'ALL';
   AppState.activeTab = 'evaluation';
   switchTab('evaluation');
-  showToast(`Filtered Evaluation Studio for AI: "${aiClass}" vs Human: "${gtClass}"`, 'info');
+  showToast(`Filtered Evaluate for AI: "${aiClass}" vs Human: "${gtClass}"`, 'info');
 }
 
 function renderPerClassTable(m) {
@@ -917,7 +917,7 @@ function renderReviewQueue(m) {
       <div style="grid-column: 1 / -1; text-align: center; padding: 4rem; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-subtle);">
         <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎉</div>
         <h3 style="color: var(--text-main); font-weight: 700; margin-bottom: 0.25rem;">
-          ${curFilter === 'pending' ? 'Review Queue Empty!' : 'No Records Found'}
+          ${curFilter === 'pending' ? 'Review Empty!' : 'No Records Found'}
         </h3>
         <p style="color: var(--text-dim); font-size: 0.85rem;">${emptyMsg}</p>
       </div>
@@ -1001,7 +1001,7 @@ function quickReviewDecision(ticketId, decision, finalClass) {
     reviewer_decision: decision,
     reviewer_classification: finalClass,
     feedback_type: decision === 'Correct' ? '' : 'Wrong classification',
-    reviewer_comment: `Quick reviewed as ${decision} via Review Queue.`,
+    reviewer_comment: `Quick reviewed as ${decision} via Review.`,
     reason_quality: decision === 'Correct' ? 'Good' : 'Needs Improvement',
     evidence_quality: decision === 'Correct' ? 'Good' : 'Needs Improvement',
     action_quality: decision === 'Correct' ? 'Good' : 'Needs Improvement',
@@ -1691,12 +1691,12 @@ function updateDatasetModeBadges() {
   const optImportHist = document.querySelector('#importTargetDataset option[value="HISTORICAL"]');
   if (optImportHist) optImportHist.textContent = `Historical Baseline (${histLen} Tickets)`;
   const optImportSprint = document.querySelector('#importTargetDataset option[value="CURRENT_SPRINT"]');
-  if (optImportSprint) optImportSprint.textContent = `Current Sprint (${sprintLen} Tickets)`;
+  if (optImportSprint) optImportSprint.textContent = `Next Sprint (${sprintLen} Tickets)`;
 
   const optAppendHist = document.querySelector('#appendTargetDataset option[value="HISTORICAL"]');
   if (optAppendHist) optAppendHist.textContent = 'Historical Baseline';
   const optAppendSprint = document.querySelector('#appendTargetDataset option[value="CURRENT_SPRINT"]');
-  if (optAppendSprint) optAppendSprint.textContent = 'Current Sprint';
+  if (optAppendSprint) optAppendSprint.textContent = 'Next Sprint';
 }
 
 const DatasetIngestEngine = {
@@ -1870,7 +1870,7 @@ function renderDatasetColumnMapper(headers, rows, fileName) {
   let html = `
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
       <h4 style="color: var(--text-main); margin: 0;">Confirm Column Mapping (${rows.length} rows)</h4>
-      <span style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: 700;">Target: ${isHistorical ? 'Historical Baseline' : 'Current Sprint'}</span>
+      <span style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: 700;">Target: ${isHistorical ? 'Historical Baseline' : 'Next Sprint'}</span>
     </div>
     <table class="mapping-table">
       <tbody>
@@ -1902,7 +1902,7 @@ function renderDatasetColumnMapper(headers, rows, fileName) {
   if (preview) {
     preview.innerHTML = `
       <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; padding: 0.75rem; font-size: 0.8rem; color: var(--text-muted);">
-        ℹ️ Ready to append: <strong>${escapeHtml(fileName)}</strong> (${rows.length} incoming rows). Click "Validate & Append Tickets" to add to <strong>${isHistorical ? 'Historical Baseline' : 'Current Sprint'}</strong>.
+        ℹ️ Ready to append: <strong>${escapeHtml(fileName)}</strong> (${rows.length} incoming rows). Click "Validate & Append Tickets" to add to <strong>${isHistorical ? 'Historical Baseline' : 'Next Sprint'}</strong>.
       </div>
     `;
   }
@@ -2035,12 +2035,12 @@ function executeDatasetAppend() {
       <div style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 8px; padding: 0.85rem; color: #6ee7b7; font-size: 0.85rem;">
         ✅ <strong>Successfully Appended!</strong><br>
         Added <strong>+${addedCount}</strong> new tickets, updated <strong>${updatedCount}</strong>, skipped <strong>${skippedCount}</strong>.<br>
-        New total in <strong>${targetDataset === 'HISTORICAL' ? 'Historical Baseline' : 'Current Sprint'}</strong>: <strong>${targetArray.length}</strong> tickets.
+        New total in <strong>${targetDataset === 'HISTORICAL' ? 'Historical Baseline' : 'Next Sprint'}</strong>: <strong>${targetArray.length}</strong> tickets.
       </div>
     `;
   }
 
-  showToast(`Appended +${addedCount} tickets to ${targetDataset === 'HISTORICAL' ? 'Historical Baseline' : 'Current Sprint'}! Total: ${targetArray.length}`, 'success');
+  showToast(`Appended +${addedCount} tickets to ${targetDataset === 'HISTORICAL' ? 'Historical Baseline' : 'Next Sprint'}! Total: ${targetArray.length}`, 'success');
 }
 
 function saveDatasetToStorage(targetDataset) {
@@ -2077,7 +2077,7 @@ function exportCurrentDatasetCSV(targetDataset) {
 }
 
 function resetDatasetToOriginalSeeds() {
-  if (!confirm('Are you sure you want to reset datasets back to the original seeds (100 Historical / 52 Sprint)? Any appended tickets will be cleared.')) {
+  if (!confirm('Are you sure you want to reset datasets back to the original seeds (100 Historical / 52 Next Sprint)? Any appended tickets will be cleared.')) {
     return;
   }
   localStorage.removeItem('triage_custom_historical_tickets');
@@ -2086,7 +2086,7 @@ function resetDatasetToOriginalSeeds() {
   AppState.sprintTickets = [...(window.SEED_SPRINT_TICKETS || [])];
   updateDatasetModeBadges();
   refreshAllViews();
-  showToast('Reset datasets to original seeds (100 Historical / 52 Sprint)', 'info');
+  showToast('Reset datasets to original seeds (100 Historical / 52 Next Sprint)', 'info');
 
   const preview = document.getElementById('datasetImportPreview');
   if (preview) {
@@ -2478,7 +2478,7 @@ const TAB_CATEGORY_MAP = {
   'import': 'historical_results',
   'export': 'historical_results',
 
-  // Current Run
+  // Current Ticket Queue
   'evaluation': 'current_run',
   'review': 'current_run',
 
@@ -2492,8 +2492,8 @@ const TAB_NAME_MAP = {
   'comparison': 'Model Comparison',
   'import': 'Import & Mapping',
   'export': 'Export Center',
-  'evaluation': 'Evaluation Studio',
-  'review': 'Review Queue',
+  'evaluation': 'Evaluate',
+  'review': 'Review',
   'patterns': 'Feedback & Patterns',
   'framework': 'Triage Framework'
 };
@@ -2501,7 +2501,7 @@ const TAB_NAME_MAP = {
 const CATEGORY_META = {
   'current_run': {
     id: 'current_run',
-    name: 'Current Run',
+    name: 'Current Ticket Queue',
     icon: '⚡',
     defaultTab: 'evaluation',
     tabs: ['evaluation', 'review']
@@ -2690,7 +2690,7 @@ function navigateToHighRiskErrors() {
   }
 
   const count = document.getElementById('quickHighRiskVal')?.textContent || '0';
-  showToast(`Redirected to Evaluation Studio: Filtered to ${count} High-Risk Errors (≥ ${Math.round(AppState.confidenceThreshold * 100)}% Conf)`, 'warning');
+  showToast(`Redirected to Evaluate: Filtered to ${count} High-Risk Errors (≥ ${Math.round(AppState.confidenceThreshold * 100)}% Conf)`, 'warning');
 
   const tableCard = document.querySelector('#tab_evaluation .table-card');
   if (tableCard) {
@@ -2703,7 +2703,7 @@ function navigateToPendingReviews() {
   setReviewQueueFilter('pending');
 
   const count = document.getElementById('quickPendingVal')?.textContent || '0';
-  showToast(`Redirected to Review Queue: ${count} pending tickets ready for audit`, 'info');
+  showToast(`Redirected to Review: ${count} pending tickets ready for audit`, 'info');
 
   const queueHeader = document.querySelector('#tab_review .review-queue-header');
   if (queueHeader) {
@@ -2745,7 +2745,7 @@ function navigateToManualTriage() {
   }
 
   const rate = document.getElementById('quickAbstainVal')?.textContent || '--%';
-  showToast(`Redirected to Evaluation Studio: Showing tickets sent to Manual Review (${rate} rate)`, 'info');
+  showToast(`Redirected to Evaluate: Showing tickets sent to Manual Review (${rate} rate)`, 'info');
 
   const tableCard = document.querySelector('#tab_evaluation .table-card');
   if (tableCard) {
