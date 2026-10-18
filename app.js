@@ -1698,9 +1698,9 @@ function updateDatasetModeBadges() {
   if (optImportSprint) optImportSprint.textContent = `Current Sprint (${sprintLen} Tickets)`;
 
   const optAppendHist = document.querySelector('#appendTargetDataset option[value="HISTORICAL"]');
-  if (optAppendHist) optAppendHist.textContent = `🏛️ Historical Baseline (${histLen} Tickets)`;
+  if (optAppendHist) optAppendHist.textContent = 'Historical Baseline';
   const optAppendSprint = document.querySelector('#appendTargetDataset option[value="CURRENT_SPRINT"]');
-  if (optAppendSprint) optAppendSprint.textContent = `⚡ Current Sprint (${sprintLen} Tickets)`;
+  if (optAppendSprint) optAppendSprint.textContent = 'Current Sprint';
 }
 
 const DatasetIngestEngine = {
