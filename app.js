@@ -16,7 +16,13 @@ const AppState = {
   reviews: {}, // Key: `${runId}_${ticketId}`
 
   // UI State
+  activeCategory: 'historical_results',
   activeTab: 'dashboard',
+  categoryLastTab: {
+    'current_run': 'evaluation',
+    'historical_results': 'dashboard',
+    'knowledge_base': 'patterns'
+  },
   tableFilters: {
     search: '',
     status: 'ALL',
@@ -32,7 +38,10 @@ const AppState = {
 
   // Comparison State
   compareRunAId: 'run_hist_v1',
-  compareRunBId: 'run_hist_v2'
+  compareRunBId: 'run_hist_v2',
+
+  // Review Queue Filter: 'pending', 'reviewed', 'all'
+  reviewQueueFilter: 'pending'
 };
 
 // ==========================================================================
@@ -44,6 +53,7 @@ function initApp() {
   setupEventListeners();
   renderRunSelector();
   switchMode(AppState.currentMode);
+  switchTab(AppState.activeTab || 'dashboard');
   showToast('Triage Evaluator initialized successfully', 'success');
 }
 
@@ -459,10 +469,12 @@ function renderQuickKpis(m) {
 
   document.getElementById('quickAbstainVal').textContent = `${(m.abstentionRate * 100).toFixed(1)}%`;
 
-  // Count pending reviews in sprint mode
+  // Count pending reviews in either sprint mode or historical mode
   let pendingCount = 0;
   if (AppState.currentMode === 'CURRENT_SPRINT') {
-    pendingCount = m.evaluated.filter(ev => !ev.review).length;
+    pendingCount = m.evaluated.filter(ev => !ev.review || ev.isProvisional).length;
+  } else {
+    pendingCount = m.evaluated.filter(ev => !ev.review && (ev.matchStatus === 'INCORRECT' || ev.matchStatus === 'ABSTAINED')).length;
   }
   document.getElementById('quickPendingVal').textContent = pendingCount;
   document.getElementById('badgeReviewCount').textContent = pendingCount;
@@ -800,14 +812,14 @@ function renderPagination(totalCount) {
   const cur = AppState.currentPage;
 
   container.innerHTML = `
-    <button class="btn btn-secondary btn-sm" ${cur <= 1 ? 'disabled' : ''} onclick="changePage(${cur - 1})">
-      ◀ Previous
+    <button class="btn btn-secondary btn-sm" ${cur <= 1 ? 'disabled' : ''} onclick="changePage(${cur - 1})" title="Previous page (Shortcut: Press ←)">
+      ◀ Previous <span class="btn-press-hint">Press <kbd class="kbd-subtle">←</kbd></span>
     </button>
     <span style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0.5rem;">
       Page ${cur} of ${totalPages}
     </span>
-    <button class="btn btn-secondary btn-sm" ${cur >= totalPages ? 'disabled' : ''} onclick="changePage(${cur + 1})">
-      Next ▶
+    <button class="btn btn-secondary btn-sm" ${cur >= totalPages ? 'disabled' : ''} onclick="changePage(${cur + 1})" title="Next page (Shortcut: Press →)">
+      Next ▶ <span class="btn-press-hint">Press <kbd class="kbd-subtle">→</kbd></span>
     </button>
   `;
 }
@@ -824,27 +836,69 @@ function changePage(page) {
 // --------------------------------------------------------------------------
 // Review Queue View (Product Analyst Focus Queue)
 // --------------------------------------------------------------------------
+function setReviewQueueFilter(filter) {
+  AppState.reviewQueueFilter = filter;
+  ['pending', 'reviewed', 'all'].forEach(f => {
+    const btn = document.getElementById(`btn_review_filter_${f}`);
+    if (btn) btn.classList.toggle('active', f === filter);
+  });
+  const run = getActiveRun();
+  if (run) {
+    const m = computeRunMetrics(run);
+    renderReviewQueue(m);
+  }
+}
+
 function renderReviewQueue(m) {
   const container = document.getElementById('reviewCardsList');
   const countBadge = document.getElementById('reviewQueueCount');
   if (!container) return;
 
-  // Filter queue: unreviewed tickets in sprint mode, or misclassified/high-risk tickets in benchmark mode
-  let queueTickets = [];
+  // Compute pending vs reviewed pools
+  let pendingList = [];
+  let reviewedList = [];
+
   if (AppState.currentMode === 'CURRENT_SPRINT') {
-    queueTickets = m.evaluated.filter(ev => !ev.review || ev.isProvisional);
+    pendingList = m.evaluated.filter(ev => !ev.review || ev.isProvisional);
+    reviewedList = m.evaluated.filter(ev => ev.review && !ev.isProvisional);
   } else {
-    queueTickets = m.evaluated.filter(ev => ev.matchStatus === 'INCORRECT' || ev.matchStatus === 'ABSTAINED' || !ev.review);
+    pendingList = m.evaluated.filter(ev => !ev.review && (ev.matchStatus === 'INCORRECT' || ev.matchStatus === 'ABSTAINED'));
+    reviewedList = m.evaluated.filter(ev => ev.review && (ev.matchStatus === 'INCORRECT' || ev.matchStatus === 'ABSTAINED' || ev.review.feedback_type));
   }
 
-  if (countBadge) countBadge.textContent = `${queueTickets.length} pending`;
+  const allList = [...pendingList, ...reviewedList];
+
+  // Update counts on filter buttons
+  const elPending = document.getElementById('count_review_pending');
+  const elReviewed = document.getElementById('count_review_reviewed');
+  const elAll = document.getElementById('count_review_all');
+  if (elPending) elPending.textContent = pendingList.length;
+  if (elReviewed) elReviewed.textContent = reviewedList.length;
+  if (elAll) elAll.textContent = allList.length;
+
+  if (countBadge) countBadge.textContent = `${pendingList.length} pending`;
+
+  const curFilter = AppState.reviewQueueFilter || 'pending';
+  ['pending', 'reviewed', 'all'].forEach(f => {
+    const btn = document.getElementById(`btn_review_filter_${f}`);
+    if (btn) btn.classList.toggle('active', f === curFilter);
+  });
+
+  let queueTickets = pendingList;
+  if (curFilter === 'reviewed') queueTickets = reviewedList;
+  else if (curFilter === 'all') queueTickets = allList;
 
   if (queueTickets.length === 0) {
+    const emptyMsg = curFilter === 'pending'
+      ? 'All tickets in this dataset have been reviewed or matched expected classifications.'
+      : (curFilter === 'reviewed' ? 'No tickets have been audited in this dataset yet.' : 'No tickets available in this queue.');
     container.innerHTML = `
       <div style="grid-column: 1 / -1; text-align: center; padding: 4rem; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-subtle);">
         <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎉</div>
-        <h3 style="color: var(--text-main); font-weight: 700; margin-bottom: 0.25rem;">Review Queue Empty!</h3>
-        <p style="color: var(--text-dim); font-size: 0.85rem;">All tickets in this dataset have been reviewed or matched expected classifications.</p>
+        <h3 style="color: var(--text-main); font-weight: 700; margin-bottom: 0.25rem;">
+          ${curFilter === 'pending' ? 'Review Queue Empty!' : 'No Records Found'}
+        </h3>
+        <p style="color: var(--text-dim); font-size: 0.85rem;">${emptyMsg}</p>
       </div>
     `;
     return;
@@ -1739,6 +1793,11 @@ function setupEventListeners() {
     });
   }
 
+  // Category Switcher Buttons
+  document.querySelectorAll('.category-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchCategory(btn.dataset.category));
+  });
+
   // Nav Tabs
   document.querySelectorAll('.nav-tab-btn').forEach(tab => {
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
@@ -1835,24 +1894,231 @@ function setupEventListeners() {
     fileInput.addEventListener('change', handleFileUpload);
   }
 
-  // Global ESC key to close drawer
+  // Global Keyboard Shortcuts
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && AppState.currentDetailTicketId) {
-      closeTicketDetailDrawer();
+    const isTyping = ['input', 'textarea', 'select'].includes((e.target.tagName || '').toLowerCase()) || e.target.isContentEditable;
+    const isDrawerOpen = AppState.currentDetailTicketId && document.getElementById('ticketDetailDrawer')?.classList.contains('active');
+    const isModalOpen = document.getElementById('globalHelpModal')?.classList.contains('active');
+
+    // 1. ESC: Close any active drawer, modal, or blur active input
+    if (e.key === 'Escape') {
+      if (isDrawerOpen) {
+        closeTicketDetailDrawer();
+        e.preventDefault();
+        return;
+      }
+      if (isModalOpen) {
+        closeGlobalHelpModal();
+        e.preventDefault();
+        return;
+      }
+      if (isTyping) {
+        e.target.blur();
+        return;
+      }
+    }
+
+    // 2. Ctrl + S or Ctrl + Enter: Save Review in Deep Dive Workstation
+    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S' || e.key === 'Enter')) {
+      if (isDrawerOpen) {
+        e.preventDefault();
+        saveTicketReviewForm();
+        return;
+      }
+    }
+
+    // 3. Ctrl + K or '/': Focus Evaluation Table Search Bar
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      switchTab('evaluation');
+      const search = document.getElementById('tableSearchInput');
+      if (search) {
+        search.focus();
+        search.select();
+      }
+      return;
+    }
+
+    if (e.key === '/' && !isTyping && !isDrawerOpen && !isModalOpen) {
+      e.preventDefault();
+      switchTab('evaluation');
+      const search = document.getElementById('tableSearchInput');
+      if (search) {
+        search.focus();
+        search.select();
+      }
+      return;
+    }
+
+    // 4. '?': Toggle Global Help Modal
+    if (e.key === '?' && !isTyping && !isDrawerOpen) {
+      e.preventDefault();
+      if (isModalOpen) closeGlobalHelpModal();
+      else openGlobalHelpModal();
+      return;
+    }
+
+    // 5. Category Navigation: 1, 2, 3 (when not typing in form)
+    if (!isTyping && !isDrawerOpen && !isModalOpen) {
+      if (e.key === '1') {
+        e.preventDefault();
+        switchCategory('current_run');
+        return;
+      }
+      if (e.key === '2') {
+        e.preventDefault();
+        switchCategory('historical_results');
+        return;
+      }
+      if (e.key === '3') {
+        e.preventDefault();
+        switchCategory('knowledge_base');
+        return;
+      }
+
+      // 6. 'e' or 'E': Export CSV
+      if (e.key === 'e' || e.key === 'E') {
+        e.preventDefault();
+        exportFullEvaluationCSV();
+        return;
+      }
+
+      // 7. 'k' or 'K': Toggle Front Page Shortcuts Reference
+      if (e.key === 'k' || e.key === 'K') {
+        e.preventDefault();
+        toggleFrontShortcuts();
+        return;
+      }
+
+      // 8. 'i' or 'I': Ingest
+      if (e.key === 'i' || e.key === 'I') {
+        e.preventDefault();
+        switchTab('import');
+        return;
+      }
+
+      // 8. ArrowLeft / ArrowRight: Pagination on Evaluation Table
+      if (AppState.activeTab === 'evaluation') {
+        const run = getActiveRun();
+        if (run) {
+          const metrics = computeRunMetrics(run);
+          const totalPages = Math.ceil(metrics.evaluated.length / AppState.pageSize) || 1;
+          if (e.key === 'ArrowLeft' && AppState.currentPage > 1) {
+            e.preventDefault();
+            changePage(AppState.currentPage - 1);
+            return;
+          }
+          if (e.key === 'ArrowRight' && AppState.currentPage < totalPages) {
+            e.preventDefault();
+            changePage(AppState.currentPage + 1);
+            return;
+          }
+        }
+      }
     }
   });
 }
 
-function switchTab(tabId) {
-  AppState.activeTab = tabId;
+const TAB_CATEGORY_MAP = {
+  // Historical Results
+  'dashboard': 'historical_results',
+  'comparison': 'historical_results',
+  'import': 'historical_results',
+  'export': 'historical_results',
 
+  // Current Run
+  'evaluation': 'current_run',
+  'review': 'current_run',
+
+  // Knowledge Base
+  'patterns': 'knowledge_base',
+  'framework': 'knowledge_base'
+};
+
+const TAB_NAME_MAP = {
+  'dashboard': 'Dashboard',
+  'comparison': 'Model Comparison',
+  'import': 'Import & Mapping',
+  'export': 'Export Center',
+  'evaluation': 'Evaluation Studio',
+  'review': 'Review Queue',
+  'patterns': 'Feedback & Patterns',
+  'framework': 'Triage Framework'
+};
+
+const CATEGORY_META = {
+  'current_run': {
+    id: 'current_run',
+    name: 'Current Run',
+    icon: '⚡',
+    defaultTab: 'evaluation',
+    tabs: ['evaluation', 'review']
+  },
+  'historical_results': {
+    id: 'historical_results',
+    name: 'Historical Results',
+    icon: '🏛️',
+    defaultTab: 'dashboard',
+    tabs: ['dashboard', 'comparison', 'import', 'export']
+  },
+  'knowledge_base': {
+    id: 'knowledge_base',
+    name: 'Knowledge Base',
+    icon: '📚',
+    defaultTab: 'patterns',
+    tabs: ['patterns', 'framework']
+  }
+};
+
+function switchCategory(categoryId) {
+  const meta = CATEGORY_META[categoryId];
+  if (!meta) return;
+  const targetTab = (AppState.categoryLastTab && AppState.categoryLastTab[categoryId]) || meta.defaultTab;
+  switchTab(targetTab);
+}
+
+function switchTab(tabId) {
+  const categoryId = TAB_CATEGORY_MAP[tabId] || 'historical_results';
+  AppState.activeTab = tabId;
+  AppState.activeCategory = categoryId;
+  if (!AppState.categoryLastTab) AppState.categoryLastTab = {};
+  AppState.categoryLastTab[categoryId] = tabId;
+
+  // Update Category buttons
+  document.querySelectorAll('.category-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.category === categoryId);
+  });
+
+  // Update Category panes
+  document.querySelectorAll('.category-pane').forEach(pane => {
+    pane.classList.toggle('active', pane.id === `category_${categoryId}`);
+  });
+
+  // Show only active category subnav
+  document.querySelectorAll('.category-subtabs').forEach(subnav => {
+    subnav.style.display = subnav.dataset.parentCategory === categoryId ? 'flex' : 'none';
+  });
+
+  // Update Tab buttons
   document.querySelectorAll('.nav-tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tabId);
   });
 
+  // Update Tab panes
   document.querySelectorAll('.tab-pane').forEach(pane => {
     pane.classList.toggle('active', pane.id === `tab_${tabId}`);
   });
+
+  // Update breadcrumb
+  const catMeta = CATEGORY_META[categoryId];
+  const badgeEl = document.getElementById('activeCategoryBadge');
+  const tabBadgeEl = document.getElementById('activeTabBadge');
+  if (badgeEl && catMeta) {
+    badgeEl.textContent = `${catMeta.icon} ${catMeta.name}`;
+  }
+  if (tabBadgeEl) {
+    tabBadgeEl.textContent = TAB_NAME_MAP[tabId] || tabId;
+  }
 }
 
 function getClassBadgeName(cls) {
@@ -1899,12 +2165,26 @@ function showToast(message, type = 'info') {
 }
 
 // Guide helper functions
+function toggleFrontShortcuts() {
+  const body = document.getElementById('body_front_shortcuts');
+  const btn = document.getElementById('btn_toggle_front_shortcuts');
+  if (!body || !btn) return;
+
+  const isHidden = body.style.display === 'none' || window.getComputedStyle(body).display === 'none';
+  body.style.display = isHidden ? 'block' : 'none';
+  btn.textContent = isHidden ? 'Hide Shortcuts ✕' : 'Show Shortcuts 💡';
+
+  if (isHidden) {
+    document.getElementById('frontShortcutsPanel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
 function toggleGuide(pageKey) {
   const body = document.getElementById(`body_guide_${pageKey}`);
   const btn = document.getElementById(`btn_toggle_${pageKey}`);
   if (!body || !btn) return;
 
-  const isHidden = body.style.display === 'none';
+  const isHidden = body.style.display === 'none' || window.getComputedStyle(body).display === 'none';
   body.style.display = isHidden ? 'grid' : 'none';
   btn.textContent = isHidden ? 'Hide Guide ✕' : 'Show Guide 💡';
 }
@@ -1926,6 +2206,99 @@ function switchModalGuideTab(tabKey) {
   document.querySelectorAll('.modal-tab-pane').forEach(p => {
     p.classList.toggle('active', p.id === `modaltab_${tabKey}`);
   });
+}
+
+// Quick KPI Navigation Redirection Handlers
+function navigateToHighRiskErrors() {
+  switchTab('evaluation');
+  AppState.tableFilters.highRiskOnly = true;
+  AppState.tableFilters.matrixCellFilter = null;
+  AppState.tableFilters.status = 'ALL';
+  AppState.tableFilters.aiClass = 'ALL';
+  AppState.tableFilters.groundTruth = 'ALL';
+  AppState.tableFilters.search = '';
+  AppState.currentPage = 1;
+
+  // Sync DOM filter controls
+  const chk = document.getElementById('filterHighRiskOnly');
+  if (chk) chk.checked = true;
+  const filterStatus = document.getElementById('filterStatusSelect');
+  if (filterStatus) filterStatus.value = 'ALL';
+  const filterAi = document.getElementById('filterAiClassSelect');
+  if (filterAi) filterAi.value = 'ALL';
+  const filterGt = document.getElementById('filterGroundTruthSelect');
+  if (filterGt) filterGt.value = 'ALL';
+  const searchInput = document.getElementById('tableSearchInput');
+  if (searchInput) searchInput.value = '';
+
+  const run = getActiveRun();
+  if (run) {
+    const m = computeRunMetrics(run);
+    renderEvaluationTable(m);
+  }
+
+  const count = document.getElementById('quickHighRiskVal')?.textContent || '0';
+  showToast(`Redirected to Evaluation Studio: Filtered to ${count} High-Risk Errors (≥ ${Math.round(AppState.confidenceThreshold * 100)}% Conf)`, 'warning');
+
+  const tableCard = document.querySelector('#tab_evaluation .table-card');
+  if (tableCard) {
+    tableCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function navigateToPendingReviews() {
+  switchTab('review');
+  setReviewQueueFilter('pending');
+
+  const count = document.getElementById('quickPendingVal')?.textContent || '0';
+  showToast(`Redirected to Review Queue: ${count} pending tickets ready for audit`, 'info');
+
+  const queueHeader = document.querySelector('#tab_review .review-queue-header');
+  if (queueHeader) {
+    queueHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function navigateToDashboardAccuracy() {
+  switchTab('dashboard');
+  showToast('Redirected to Executive Dashboard', 'info');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function navigateToManualTriage() {
+  switchTab('evaluation');
+  AppState.tableFilters.highRiskOnly = false;
+  AppState.tableFilters.matrixCellFilter = null;
+  AppState.tableFilters.status = 'ABSTAINED';
+  AppState.tableFilters.aiClass = 'ALL';
+  AppState.tableFilters.groundTruth = 'ALL';
+  AppState.tableFilters.search = '';
+  AppState.currentPage = 1;
+
+  const chk = document.getElementById('filterHighRiskOnly');
+  if (chk) chk.checked = false;
+  const filterStatus = document.getElementById('filterStatusSelect');
+  if (filterStatus) filterStatus.value = 'ABSTAINED';
+  const filterAi = document.getElementById('filterAiClassSelect');
+  if (filterAi) filterAi.value = 'ALL';
+  const filterGt = document.getElementById('filterGroundTruthSelect');
+  if (filterGt) filterGt.value = 'ALL';
+  const searchInput = document.getElementById('tableSearchInput');
+  if (searchInput) searchInput.value = '';
+
+  const run = getActiveRun();
+  if (run) {
+    const m = computeRunMetrics(run);
+    renderEvaluationTable(m);
+  }
+
+  const rate = document.getElementById('quickAbstainVal')?.textContent || '--%';
+  showToast(`Redirected to Evaluation Studio: Showing tickets sent to Manual Review (${rate} rate)`, 'info');
+
+  const tableCard = document.querySelector('#tab_evaluation .table-card');
+  if (tableCard) {
+    tableCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 
 // Kick off when DOM is ready

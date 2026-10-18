@@ -112,7 +112,7 @@ Write-Host "`nTest Group 5: HTTP Web Server Endpoint" -ForegroundColor Yellow
 try {
     $res = Invoke-WebRequest -Uri "http://localhost:3005" -UseBasicParsing -TimeoutSec 5
     Assert-Equal "HTTP status code is 200" $res.StatusCode 200
-    Assert-True "HTML contains CrelioHealth brand" ($res.Content -match "CrelioHealth TriageBot Evaluator")
+    Assert-True "HTML contains Auto Triage Evaluator brand" ($res.Content -match "Auto Triage Evaluator")
     Assert-True "HTML includes seed-data.js" ($res.Content -match 'seed-data\.js')
     Assert-True "HTML includes baseline_runs.js" ($res.Content -match 'baseline_runs\.js')
     Assert-True "HTML includes app.js" ($res.Content -match 'app\.js')
