@@ -1681,10 +1681,6 @@ function updateDatasetModeBadges() {
   const histLen = AppState.historicalTickets ? AppState.historicalTickets.length : 0;
   const sprintLen = AppState.sprintTickets ? AppState.sprintTickets.length : 0;
 
-  const histBadge = document.querySelector('.mode-btn[data-mode="HISTORICAL"] .mode-badge');
-  if (histBadge) histBadge.textContent = histLen;
-  const sprintBadge = document.querySelector('.mode-btn[data-mode="CURRENT_SPRINT"] .mode-badge');
-  if (sprintBadge) sprintBadge.textContent = sprintLen;
 
   const statsHist = document.getElementById('statsHistCount');
   if (statsHist) statsHist.textContent = histLen;
