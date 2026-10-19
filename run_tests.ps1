@@ -43,6 +43,7 @@ $requiredFiles = @(
     "app.js",
     "seed-data.js",
     "baseline_runs.js",
+    "repetition_data.js",
     "SAMPLE_IMPORT_TEMPLATE.csv",
     "serve.ps1"
 )
@@ -115,7 +116,9 @@ try {
     Assert-True "HTML contains Auto Triage Evaluator brand" ($res.Content -match "Auto Triage Evaluator")
     Assert-True "HTML includes seed-data.js" ($res.Content -match 'seed-data\.js')
     Assert-True "HTML includes baseline_runs.js" ($res.Content -match 'baseline_runs\.js')
+    Assert-True "HTML includes repetition_data.js" ($res.Content -match 'repetition_data\.js')
     Assert-True "HTML includes app.js" ($res.Content -match 'app\.js')
+    Assert-True "HTML includes repetition tab" ($res.Content -match 'data-tab="repetition"')
 } catch {
     Assert-True "HTTP request succeeded" $false
 }

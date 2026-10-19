@@ -2535,4 +2535,246 @@ textarea.form-control {
   background: rgba(255, 255, 255, 0.02);
 }
 
+/* ==============================================================================
+   Similar Issue Repetition Styles (Historical Baseline)
+   ============================================================================== */
+
+.repetition-filter-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.repetition-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 280px;
+}
+
+.repetition-search-input {
+  width: 100%;
+  padding-left: 2.2rem;
+}
+
+.repetition-control-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.repetition-pills {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.rep-pill {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.775rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  user-select: none;
+}
+
+.rep-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.rep-pill.active {
+  background: rgba(99, 102, 241, 0.2);
+  border-color: var(--primary);
+  color: #c7d2fe;
+  box-shadow: 0 0 14px rgba(99, 102, 241, 0.3);
+}
+
+.rep-pill .pill-cnt {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+}
+
+.rep-pill.active .pill-cnt {
+  background: rgba(99, 102, 241, 0.4);
+  color: #ffffff;
+}
+
+/* Repetition Table Specifics */
+.repetition-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.repetition-table th {
+  background: var(--bg-surface);
+  padding: 0.85rem 1rem;
+  font-size: 0.725rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.rep-table-row td {
+  padding: 1rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  vertical-align: top;
+  font-size: 0.825rem;
+  line-height: 1.45;
+}
+
+.rep-table-row:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.rep-jira-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.rep-action-tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+  width: fit-content;
+  white-space: nowrap;
+}
+
+.rep-summary-text {
+  font-weight: 600;
+  color: var(--text-main);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  margin-bottom: 0.45rem;
+}
+
+.rep-metadata-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.rep-meta-chip {
+  font-size: 0.72rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.rep-cluster-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 0.45rem;
+  user-select: none;
+}
+
+.rep-cluster-tag:hover {
+  filter: brightness(1.2);
+  transform: translateY(-1px);
+}
+
+.rep-occurrence-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.rep-evidence-box {
+  background: rgba(245, 158, 11, 0.04);
+  border: 1px solid rgba(245, 158, 11, 0.18);
+  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.rep-evidence-icon {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.rep-evidence-text {
+  font-size: 0.785rem;
+  color: #fde68a;
+  line-height: 1.45;
+}
+
+.rep-action-box {
+  background: rgba(16, 185, 129, 0.04);
+  border: 1px solid rgba(16, 185, 129, 0.18);
+  border-radius: 6px;
+  padding: 0.55rem 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.rep-action-icon {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.rep-action-text {
+  font-size: 0.785rem;
+  color: #a7f3d0;
+  line-height: 1.45;
+}
+
+.rep-owner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  color: #c7d2fe;
+  padding: 0.35rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  width: fit-content;
+  line-height: 1.35;
+}
+
+.rep-owner-icon {
+  font-size: 0.85rem;
+}
+
+
 

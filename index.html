@@ -124,6 +124,11 @@
             </button>
           </li>
           <li>
+            <button class="nav-tab-btn" data-tab="repetition">
+              🔁 Similar Issue Repetition
+            </button>
+          </li>
+          <li>
             <button class="nav-tab-btn" data-tab="comparison">
               🔬 Model Comparison
             </button>
@@ -528,6 +533,170 @@
             </div>
           </div>
           <div class="high-risk-list" id="highRiskList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: SIMILAR ISSUE REPETITION (HISTORICAL BASELINE) -->
+    <section class="tab-pane" id="tab_repetition">
+      
+      <!-- Quick Help Guide for Repetition -->
+      <div class="page-quick-guide" id="guide_repetition">
+        <div class="guide-header" onclick="toggleGuide('repetition')">
+          <div class="guide-title-wrap">
+            <div class="guide-icon-badge">🔁</div>
+            <div>
+              <div class="guide-title">Quick Guide: Similar Issue Repetition (Historical Baseline)</div>
+              <div class="guide-subtitle">Identify recurring root problems across tickets with different titles, summaries, and reporters</div>
+            </div>
+          </div>
+          <button class="guide-toggle-btn" id="btn_toggle_repetition">Show Guide 💡</button>
+        </div>
+        <div class="guide-body" id="body_guide_repetition" style="display: none;">
+          <div class="guide-card">
+            <div class="guide-card-head">🎯 Purpose of this Section</div>
+            <div class="guide-card-text">
+              Historical baseline tickets frequently share identical technical root causes or operational failures despite completely different Jira titles, client wording, or reporter phrasing. This analysis surfaces <strong>systemic technical debt</strong> and <strong>process bottlenecks</strong> to eliminate repeat tickets at the source.
+            </div>
+          </div>
+          <div class="guide-card">
+            <div class="guide-card-head">⚡ Repetitive Patterns Analyzed</div>
+            <div class="guide-card-text">
+              Grouped across <strong>8 major systemic clusters</strong>: Accession Lifecycle Drops, Inventory PO/Auto-Stock Desync, Financial Ledger Settlements, Clinical Formula Requests, White-Label Domain Routing, Template/Notification Edits, Patient Age Float Storage, and PDF Graph Rendering.
+            </div>
+          </div>
+          <div class="guide-card tip-card">
+            <div class="guide-card-head">💡 Triage &amp; Engineering Action</div>
+            <div class="guide-card-text">
+              Use the <strong>Cluster Filter Pills</strong> and <strong>Suggested Owner</strong> tags to route architectural enhancements to squad roadmaps, turning reactive one-off fixes into proactive platform resilience.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metric KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card highlight-cyan">
+          <div class="kpi-card-header">
+            <span class="kpi-card-title">Repeated Baseline Issues</span>
+            <span class="kpi-card-icon">🔁</span>
+          </div>
+          <div class="kpi-card-value" id="repKpiTotalIssues">59</div>
+          <div class="kpi-card-sub">59% of Historical Baseline tickets repeat</div>
+        </div>
+
+        <div class="kpi-card highlight-purple">
+          <div class="kpi-card-header">
+            <span class="kpi-card-title">Recurring Root Patterns</span>
+            <span class="kpi-card-icon">🧩</span>
+          </div>
+          <div class="kpi-card-value" id="repKpiUniqueClusters">8</div>
+          <div class="kpi-card-sub">Core architectural problem domains</div>
+        </div>
+
+        <div class="kpi-card highlight-danger">
+          <div class="kpi-card-header">
+            <span class="kpi-card-title">Top Frequency Pattern</span>
+            <span class="kpi-card-icon">💰</span>
+          </div>
+          <div class="kpi-card-value" style="font-size: 1.1rem; line-height: 1.3;" id="repKpiTopCluster">Financial Ledger &amp; Rounding</div>
+          <div class="kpi-card-sub">12 tickets · Float rounding &amp; advance balance</div>
+        </div>
+
+        <div class="kpi-card highlight-success">
+          <div class="kpi-card-header">
+            <span class="kpi-card-title">Primary Squad Load</span>
+            <span class="kpi-card-icon">👥</span>
+          </div>
+          <div class="kpi-card-value" style="font-size: 1.1rem; line-height: 1.3;" id="repKpiTopOwner">Finance &amp; LIMS Core Squads</div>
+          <div class="kpi-card-sub">Over 60% of recurring operational tickets</div>
+        </div>
+      </div>
+
+      <!-- Filters & Action Bar -->
+      <div class="content-card" style="margin-bottom: 1.5rem; padding: 1.25rem;">
+        <div class="repetition-filter-bar">
+          <div class="repetition-search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="repetitionSearchInput" class="filter-input repetition-search-input" placeholder="Search by Jira ID, summary, cluster keyword, signals, action, or owner..." />
+          </div>
+
+          <div class="repetition-control-group">
+            <div class="filter-group">
+              <label for="repetitionClassFilter" class="filter-label">Classification:</label>
+              <select id="repetitionClassFilter" class="filter-select">
+                <option value="all">All Classifications</option>
+                <option value="Bug">Bug</option>
+                <option value="Config">Config</option>
+                <option value="Change Request">Change Request</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="repetitionClusterSelect" class="filter-label">Pattern Cluster:</label>
+              <select id="repetitionClusterSelect" class="filter-select">
+                <option value="all">All 8 Patterns (59 tickets)</option>
+                <option value="accession_lifecycle">🧪 Accession Drops &amp; Waiting List (9)</option>
+                <option value="inventory_sync">📦 Inventory PO &amp; Consumption (9)</option>
+                <option value="financial_ledger">💰 Financial Ledgers &amp; Rounding (12)</option>
+                <option value="formula_builder">🧮 Clinical Formulas (5)</option>
+                <option value="whitelabel_tenant">🌐 Whitelabel &amp; Custom Logins (7)</option>
+                <option value="template_notification">✉️ Templates &amp; Translations (8)</option>
+                <option value="patient_age">🔢 Patient Age Float Storage (3)</option>
+                <option value="graph_pdf">📊 PDF Graphs &amp; Print Spooling (6)</option>
+              </select>
+            </div>
+
+            <button class="btn btn-secondary" id="btnExportRepetitionCsv" onclick="exportRepetitionCSV()">
+              📥 Export CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Filter Pills -->
+        <div class="repetition-pills" id="repetitionClusterPills">
+          <button class="rep-pill active" data-cluster="all">All Patterns <span class="pill-cnt">59</span></button>
+          <button class="rep-pill" data-cluster="accession_lifecycle">🧪 Accession Drops &amp; Waiting List <span class="pill-cnt">9</span></button>
+          <button class="rep-pill" data-cluster="inventory_sync">📦 Inventory PO &amp; Consumption <span class="pill-cnt">9</span></button>
+          <button class="rep-pill" data-cluster="financial_ledger">💰 Financial Ledgers &amp; Rounding <span class="pill-cnt">12</span></button>
+          <button class="rep-pill" data-cluster="formula_builder">🧮 Clinical Formulas <span class="pill-cnt">5</span></button>
+          <button class="rep-pill" data-cluster="whitelabel_tenant">🌐 Whitelabel &amp; Custom Logins <span class="pill-cnt">7</span></button>
+          <button class="rep-pill" data-cluster="template_notification">✉️ Templates &amp; Translations <span class="pill-cnt">8</span></button>
+          <button class="rep-pill" data-cluster="patient_age">🔢 Patient Age Float Storage <span class="pill-cnt">3</span></button>
+          <button class="rep-pill" data-cluster="graph_pdf">📊 PDF Graphs &amp; Print Spooling <span class="pill-cnt">6</span></button>
+        </div>
+      </div>
+
+      <!-- Master Repetition Table with 6 Columns -->
+      <div class="table-card">
+        <div class="table-header-bar" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 0.75rem;">
+          <div>
+            <h3 class="card-title" style="margin: 0; font-size: 1.05rem;">Historical Repetitive Issue Catalog</h3>
+            <p class="card-subtitle" style="margin: 0.25rem 0 0 0; font-size: 0.8rem; color: var(--text-dim);" id="repTableSubtitle">
+              Showing 59 repetitive baseline issues across 8 root patterns
+            </p>
+          </div>
+          <div class="table-stats-badge" id="repTableCountBadge" style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); color: #c7d2fe; padding: 0.35rem 0.75rem; border-radius: 999px; font-size: 0.775rem; font-weight: 700;">
+            59 Tickets
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table repetition-table" id="repetitionTable">
+            <thead>
+              <tr>
+                <th style="width: 140px; min-width: 140px;">JIRA ID</th>
+                <th style="min-width: 290px;">SUMMARY &amp; METADATA</th>
+                <th style="min-width: 260px;">REPETITIVE OCCURENCE</th>
+                <th style="min-width: 260px;">EVIDENCE &amp; SIGNALS</th>
+                <th style="min-width: 260px;">Recommended Action</th>
+                <th style="min-width: 190px;">Suggested Owner</th>
+              </tr>
+            </thead>
+            <tbody id="repetitionTableBody">
+              <!-- Rendered via JavaScript -->
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -1836,6 +2005,7 @@
   <script src="xlsx.mini.min.js"></script>
   <script src="seed-data.js"></script>
   <script src="baseline_runs.js"></script>
-  <script src="app.js?v=2.4"></script>
+  <script src="repetition_data.js"></script>
+  <script src="app.js?v=2.5"></script>
 </body>
 </html>

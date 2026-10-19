@@ -41,7 +41,14 @@ const AppState = {
   compareRunBId: 'run_hist_v2',
 
   // Review Queue Filter: 'pending', 'reviewed', 'all'
-  reviewQueueFilter: 'pending'
+  reviewQueueFilter: 'pending',
+
+  // Repetition Filters
+  repetitionFilters: {
+    search: '',
+    cluster: 'all',
+    classification: 'all'
+  }
 };
 
 // ==========================================================================
@@ -53,6 +60,7 @@ function initApp() {
   setupEventListeners();
   renderRunSelector();
   switchMode(AppState.currentMode);
+  renderSimilarIssueRepetition();
   switchTab(AppState.activeTab || 'dashboard');
   showToast('Triage Evaluator initialized successfully', 'success');
 }
@@ -2214,6 +2222,307 @@ function downloadCSV(filename, headers, rows) {
 }
 
 // ==========================================================================
+// 5B. Historical Baseline: Similar Issue Repetition Analysis
+// ==========================================================================
+
+function getRepetitionTickets() {
+  return window.HISTORICAL_REPETITION_TICKETS || [];
+}
+
+function getClustersMeta() {
+  return window.HISTORICAL_CLUSTERS_META || [];
+}
+
+function filterRepetitionCluster(clusterId) {
+  AppState.repetitionFilters.cluster = clusterId;
+  
+  // Sync dropdown selector
+  const clusterSelect = document.getElementById('repetitionClusterSelect');
+  if (clusterSelect) {
+    clusterSelect.value = clusterId;
+  }
+
+  // Sync cluster filter pills
+  document.querySelectorAll('#repetitionClusterPills .rep-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.cluster === clusterId);
+  });
+
+  renderSimilarIssueRepetitionTable();
+}
+
+function renderSimilarIssueRepetition() {
+  const allTickets = getRepetitionTickets();
+  const clusters = getClustersMeta();
+
+  // Update top metric cards
+  const kpiTotal = document.getElementById('repKpiTotalIssues');
+  const kpiClusters = document.getElementById('repKpiUniqueClusters');
+  const kpiTopCluster = document.getElementById('repKpiTopCluster');
+  const kpiTopOwner = document.getElementById('repKpiTopOwner');
+
+  if (kpiTotal) kpiTotal.textContent = allTickets.length;
+  if (kpiClusters) kpiClusters.textContent = clusters.length;
+
+  // Compute cluster counts
+  const clusterCounts = {};
+  allTickets.forEach(t => {
+    clusterCounts[t.clusterId] = (clusterCounts[t.clusterId] || 0) + 1;
+  });
+
+  // Identify highest frequency cluster
+  let maxClusterId = '';
+  let maxCount = 0;
+  Object.keys(clusterCounts).forEach(cid => {
+    if (clusterCounts[cid] > maxCount) {
+      maxCount = clusterCounts[cid];
+      maxClusterId = cid;
+    }
+  });
+
+  const topClusterMeta = clusters.find(c => c.id === maxClusterId);
+  if (kpiTopCluster && topClusterMeta) {
+    kpiTopCluster.textContent = `${topClusterMeta.shortName} (${maxCount})`;
+  }
+
+  // Update pill counts
+  document.querySelectorAll('#repetitionClusterPills .rep-pill').forEach(pill => {
+    const cid = pill.dataset.cluster;
+    const cntEl = pill.querySelector('.pill-cnt');
+    if (cntEl) {
+      if (cid === 'all') {
+        cntEl.textContent = allTickets.length;
+      } else {
+        cntEl.textContent = clusterCounts[cid] || 0;
+      }
+    }
+  });
+
+  renderSimilarIssueRepetitionTable();
+}
+
+function renderSimilarIssueRepetitionTable() {
+  const tbody = document.getElementById('repetitionTableBody');
+  const countBadge = document.getElementById('repTableCountBadge');
+  const subtitle = document.getElementById('repTableSubtitle');
+  if (!tbody) return;
+
+  const allTickets = getRepetitionTickets();
+  const clusters = getClustersMeta();
+  const clusterMap = {};
+  clusters.forEach(c => { clusterMap[c.id] = c; });
+
+  const query = (AppState.repetitionFilters.search || '').trim().toLowerCase();
+  const clusterFilter = AppState.repetitionFilters.cluster || 'all';
+  const classFilter = AppState.repetitionFilters.classification || 'all';
+
+  const filtered = allTickets.filter(item => {
+    // Cluster filter
+    if (clusterFilter !== 'all' && item.clusterId !== clusterFilter) return false;
+
+    // Classification filter
+    if (classFilter !== 'all' && item.classification !== classFilter) return false;
+
+    // Search query across fields
+    if (query) {
+      const matchId = (item.jiraId || '').toLowerCase().includes(query);
+      const matchSum = (item.summary || '').toLowerCase().includes(query);
+      const matchRep = (item.repetitiveOccurrence || '').toLowerCase().includes(query);
+      const matchSig = (item.evidenceSignals || '').toLowerCase().includes(query);
+      const matchAct = (item.recommendedAction || '').toLowerCase().includes(query);
+      const matchOwn = (item.suggestedOwner || '').toLowerCase().includes(query);
+      const matchCls = (item.classification || '').toLowerCase().includes(query);
+      const matchHmn = (item.humanAction || '').toLowerCase().includes(query);
+      const matchAsg = (item.assignee || '').toLowerCase().includes(query);
+      const matchRepName = (item.reporter || '').toLowerCase().includes(query);
+      if (!matchId && !matchSum && !matchRep && !matchSig && !matchAct && !matchOwn && !matchCls && !matchHmn && !matchAsg && !matchRepName) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  if (countBadge) {
+    countBadge.textContent = `${filtered.length} Tickets`;
+  }
+
+  if (subtitle) {
+    if (clusterFilter !== 'all') {
+      const cMeta = clusterMap[clusterFilter];
+      subtitle.textContent = `Filtered to "${cMeta ? cMeta.name : clusterFilter}" (${filtered.length} issues)`;
+    } else if (query || classFilter !== 'all') {
+      subtitle.textContent = `Filtered ${filtered.length} of ${allTickets.length} repetitive tickets`;
+    } else {
+      subtitle.textContent = `Showing all ${allTickets.length} repetitive baseline issues across ${clusters.length} root patterns`;
+    }
+  }
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔍</div>
+          <div style="font-size: 1rem; font-weight: 700; color: var(--text-main);">No matching repetitive issues found</div>
+          <p style="font-size: 0.85rem; margin-top: 0.25rem;">Try adjusting your search terms or resetting filters.</p>
+          <button class="btn btn-secondary btn-sm" style="margin-top: 1rem;" onclick="resetRepetitionFilters()">Reset Filters</button>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(item => {
+    const cMeta = clusterMap[item.clusterId] || { name: item.clusterId, icon: '🔁', color: 'var(--primary)' };
+    const classBadgeClass = getClassBadgeName(item.classification);
+    
+    // Format Human Action badge
+    const actionClean = escapeHtml(item.humanAction || 'Under Review');
+    let actionStyle = 'background: rgba(255,255,255,0.06); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1);';
+    if (actionClean.toLowerCase().includes('fixed')) {
+      actionStyle = 'background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);';
+    } else if (actionClean.toLowerCase().includes('working as expected')) {
+      actionStyle = 'background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);';
+    } else if (actionClean.toLowerCase().includes('task completed') || actionClean.toLowerCase().includes('enhancement') || actionClean.toLowerCase().includes('new feature')) {
+      actionStyle = 'background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);';
+    } else if (actionClean.toLowerCase().includes('parked') || actionClean.toLowerCase().includes('not-reproducible')) {
+      actionStyle = 'background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);';
+    }
+
+    return `
+      <tr class="rep-table-row">
+        <!-- 1. JIRA ID -->
+        <td class="rep-col-jira">
+          <div class="rep-jira-cell">
+            <a href="${escapeHtml(item.jiraUrl)}" target="_blank" rel="noopener noreferrer" class="ticket-link" title="Open Jira ticket ${escapeHtml(item.jiraId)}">
+              ${escapeHtml(item.jiraId)}
+              <span style="font-size: 0.75rem;">↗</span>
+            </a>
+            <div style="display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.4rem;">
+              <span class="badge badge-${classBadgeClass}" style="align-self: flex-start;">
+                ${escapeHtml(item.classification)}
+              </span>
+              <span class="rep-action-tag" style="${actionStyle}">
+                ${actionClean}
+              </span>
+            </div>
+          </div>
+        </td>
+
+        <!-- 2. SUMMARY & METADATA -->
+        <td class="rep-col-summary">
+          <div class="rep-summary-text">
+            ${escapeHtml(item.summary)}
+          </div>
+          <div class="rep-metadata-chips">
+            ${item.assignee ? `<span class="rep-meta-chip" title="Assignee">🛠️ ${escapeHtml(item.assignee.trim())}</span>` : ''}
+            ${item.reporter ? `<span class="rep-meta-chip" title="Reporter">👤 ${escapeHtml(item.reporter.trim())}</span>` : ''}
+            <span class="rep-meta-chip" title="Priority">⚡ P${escapeHtml(item.priority || '0')}</span>
+          </div>
+        </td>
+
+        <!-- 3. REPETITIVE OCCURENCE -->
+        <td class="rep-col-occurrence">
+          <div class="rep-cluster-tag" style="background: ${cMeta.color}15; border-color: ${cMeta.color}40; color: ${cMeta.color};" onclick="filterRepetitionCluster('${item.clusterId}')" title="Filter by cluster: ${escapeHtml(cMeta.name)}">
+            <span>${cMeta.icon}</span>
+            <span>${escapeHtml(cMeta.name)}</span>
+          </div>
+          <div class="rep-occurrence-desc">
+            ${escapeHtml(item.repetitiveOccurrence)}
+          </div>
+        </td>
+
+        <!-- 4. EVIDENCE & SIGNALS -->
+        <td class="rep-col-evidence">
+          <div class="rep-evidence-box">
+            <span class="rep-evidence-icon">🔎</span>
+            <div class="rep-evidence-text">${escapeHtml(item.evidenceSignals)}</div>
+          </div>
+        </td>
+
+        <!-- 5. Recommended Action -->
+        <td class="rep-col-action">
+          <div class="rep-action-box">
+            <span class="rep-action-icon">🎯</span>
+            <div class="rep-action-text">${escapeHtml(item.recommendedAction)}</div>
+          </div>
+        </td>
+
+        <!-- 6. Suggested Owner -->
+        <td class="rep-col-owner">
+          <div class="rep-owner-badge" title="Suggested Team Ownership">
+            <span class="rep-owner-icon">👥</span>
+            <span class="rep-owner-name">${escapeHtml(item.suggestedOwner)}</span>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function resetRepetitionFilters() {
+  AppState.repetitionFilters = {
+    search: '',
+    cluster: 'all',
+    classification: 'all'
+  };
+  const searchInput = document.getElementById('repetitionSearchInput');
+  const classFilter = document.getElementById('repetitionClassFilter');
+  const clusterSelect = document.getElementById('repetitionClusterSelect');
+  if (searchInput) searchInput.value = '';
+  if (classFilter) classFilter.value = 'all';
+  if (clusterSelect) clusterSelect.value = 'all';
+  document.querySelectorAll('#repetitionClusterPills .rep-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.cluster === 'all');
+  });
+  renderSimilarIssueRepetitionTable();
+}
+
+function exportRepetitionCSV() {
+  const allTickets = getRepetitionTickets();
+  const clusters = getClustersMeta();
+  const clusterMap = {};
+  clusters.forEach(c => { clusterMap[c.id] = c; });
+
+  const headers = [
+    'JIRA ID',
+    'Jira URL',
+    'Classification',
+    'Human Action Taken',
+    'SUMMARY & METADATA',
+    'Assignee',
+    'Reporter',
+    'Priority',
+    'REPETITIVE OCCURENCE',
+    'Cluster Name',
+    'EVIDENCE & SIGNALS',
+    'Recommended Action',
+    'Suggested Owner'
+  ];
+
+  const rows = allTickets.map(t => {
+    const cMeta = clusterMap[t.clusterId] || { name: t.clusterId };
+    return [
+      t.jiraId || '',
+      t.jiraUrl || '',
+      t.classification || '',
+      t.humanAction || '',
+      t.summary || '',
+      t.assignee || '',
+      t.reporter || '',
+      t.priority || '',
+      t.repetitiveOccurrence || '',
+      cMeta.name || '',
+      t.evidenceSignals || '',
+      t.recommendedAction || '',
+      t.suggestedOwner || ''
+    ];
+  });
+
+  downloadCSV(`Historical_Similar_Issue_Repetition_${new Date().toISOString().slice(0, 10)}.csv`, headers, rows);
+  showToast('Repetition analysis CSV exported successfully', 'success');
+}
+
+// ==========================================================================
 // 6. Navigation, Tabs & Utilities
 // ==========================================================================
 
@@ -2469,11 +2778,46 @@ function setupEventListeners() {
       }
     }
   });
+
+  // Repetition Section Event Listeners
+  const repSearch = document.getElementById('repetitionSearchInput');
+  if (repSearch) {
+    repSearch.addEventListener('input', (e) => {
+      AppState.repetitionFilters.search = e.target.value;
+      renderSimilarIssueRepetitionTable();
+    });
+  }
+
+  const repClass = document.getElementById('repetitionClassFilter');
+  if (repClass) {
+    repClass.addEventListener('change', (e) => {
+      AppState.repetitionFilters.classification = e.target.value;
+      renderSimilarIssueRepetitionTable();
+    });
+  }
+
+  const repClusterSelect = document.getElementById('repetitionClusterSelect');
+  if (repClusterSelect) {
+    repClusterSelect.addEventListener('change', (e) => {
+      filterRepetitionCluster(e.target.value);
+    });
+  }
+
+  const repPillsWrap = document.getElementById('repetitionClusterPills');
+  if (repPillsWrap) {
+    repPillsWrap.addEventListener('click', (e) => {
+      const btn = e.target.closest('.rep-pill');
+      if (btn && btn.dataset.cluster) {
+        filterRepetitionCluster(btn.dataset.cluster);
+      }
+    });
+  }
 }
 
 const TAB_CATEGORY_MAP = {
   // Historical Results
   'dashboard': 'historical_results',
+  'repetition': 'historical_results',
   'comparison': 'historical_results',
   'import': 'historical_results',
   'export': 'historical_results',
@@ -2489,6 +2833,7 @@ const TAB_CATEGORY_MAP = {
 
 const TAB_NAME_MAP = {
   'dashboard': 'Dashboard',
+  'repetition': 'Similar Issue Repetition',
   'comparison': 'Model Comparison',
   'import': 'Import & Mapping',
   'export': 'Export Center',
@@ -2511,7 +2856,7 @@ const CATEGORY_META = {
     name: 'Historical Results',
     icon: '🏛️',
     defaultTab: 'dashboard',
-    tabs: ['dashboard', 'comparison', 'import', 'export']
+    tabs: ['dashboard', 'repetition', 'comparison', 'import', 'export']
   },
   'knowledge_base': {
     id: 'knowledge_base',
@@ -2570,6 +2915,11 @@ function switchTab(tabId) {
   }
   if (tabBadgeEl) {
     tabBadgeEl.textContent = TAB_NAME_MAP[tabId] || tabId;
+  }
+
+  // Trigger tab-specific renderers
+  if (tabId === 'repetition') {
+    renderSimilarIssueRepetition();
   }
 }
 
