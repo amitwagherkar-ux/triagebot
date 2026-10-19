@@ -1689,9 +1689,9 @@ function updateDatasetModeBadges() {
 
   // Sync dropdown options
   const optImportHist = document.querySelector('#importTargetDataset option[value="HISTORICAL"]');
-  if (optImportHist) optImportHist.textContent = `Historical Baseline (${histLen} Tickets)`;
+  if (optImportHist) optImportHist.textContent = 'Historical Baseline';
   const optImportSprint = document.querySelector('#importTargetDataset option[value="CURRENT_SPRINT"]');
-  if (optImportSprint) optImportSprint.textContent = `Next Sprint (${sprintLen} Tickets)`;
+  if (optImportSprint) optImportSprint.textContent = 'Next Sprint';
 
   const optAppendHist = document.querySelector('#appendTargetDataset option[value="HISTORICAL"]');
   if (optAppendHist) optAppendHist.textContent = 'Historical Baseline';
